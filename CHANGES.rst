@@ -1,20 +1,213 @@
-1.5.3 (unreleased)
+1.5.4 (unreleased)
 ==================
 
+associations
+------------
+
+- Add finalization for level 3 group association candidates to require
+  more than one observation amongst member entries [#6886]
+
+datamodels
+----------
+
+- Added new MIRI MRS dither pattern "SCAN-CALIBRATION" to list of allowed
+  values for the "PATTTYPE" keyword. [#6908]
+
+- Added MJD unit to keyword comment strings for barycentric and heliocentric
+  start, mid, and end times. [#6910]
+
+extract_1d
+----------
+
+- Fix error in variance propagation calculation [#6899]
+
+- Set DO_NOT_USE flag in extracted spectrum when the IFU extraction aperture
+  has no valid data [#6909]
+
+pipeline
+--------
+
+- Update the ``Coron3Pipeline`` to use the datamodels.open() method to
+  open an ASN file, and improve the construction of lists of the ASN
+  members [#6855]
+
+- Fixed the logic used in the `calwebb_tso3` pipeline to check for null
+  photometry results. [#6912]
+
+- Check source_ids in `calwebb_spec3` and force into 5 digit positive number,
+  if available [#6915]
+
+- Only apply source_id fix from #6915 to models with multiple
+  sources [#6917]
+
+ramp_fitting
+------------
+
+- Fixed multiprocessing error by removing ``int_times`` entirely in step code.
+  Also, in order to work better with multiprocessing changed the way one group
+  suppression gets handled and changed the location ZEROFRAME gets handled. [#6880]
+
+saturation
+----------
+
+- Updated to set the internal threshold for NO_SAT_CHECK and NaN pixels above the
+  A-to-D limit, so that they never get flagged as saturated. [#6901]
+
+skymatch
+--------
+
+- Fixed a couple errors in the step documentation. [#6891]
+
+source_catalog
+--------------
+
+- Updated the default background box size and minimum number of pixels.
+  [#6911]
+
+tweakreg
+--------
+
+- Added check for multiple matches to a single reference source and skip
+  ``tweakreg`` step when this happens. [#6896, #6898]
+
+wiimatch
+--------
+
+- ``wiimatch`` subpackage has been removed from ``jwst`` in favor of the
+  external ``wiimatch`` package:
+  https://github.com/spacetelescope/wiimatch. [#6916]
+
+1.5.3 (2022-06-20)
+==================
+
+ami_analyze
+-----------
+
+- Fixed the creation of the output product so that it no longer contains
+  an empty "SCI" extension. [#6870]
+
+- Updated the step docs to include information about all of the available
+  step arguments. [#6884]
+
+ami_average
+-----------
+
+- Updated the step to handle inputs with different sizes for `fit_image` and
+  `resid_image`. Larger inputs are trimmed to match the size of the smallest
+  input. [#6870]
+
+associations
+------------
+
+- Create level 3 association for background images, and allow background
+  target observations into level 2 image associations for background
+  subtraction [#6878]
+
+cube_build
+----------
+
+- Fixed bug in selecting correct values to extract from the cube pars reference file. [#6885]
+
+datamodels
+----------
+
+- Updated many reference file schemas to include current
+  CRDS rmap selectors in schema structure [#6866]
+
+documentation
+-------------
+
+- Updated the docs for ``calwebb_detector1`` pipeline, as well as the
+  ``linearity``, ``refpix``, ``ramp_fit``, ``saturation``, and ``superbias``
+  steps to include information on the handling of NIRCam "Frame 0" data.
+  [#6868]
+
+- Update refpix docs to clarify roles of odd_even_rows and odd_even_columns
+  parameters [#6872]
+
+extract_1d
+----------
+
+- Catch two more errors raised in the SOSS ATOCA algorithm; one, if an input
+  ImageModel uses the F277W filter (similar to #6840, which only dealt with
+  input CubeModels), and another for bad DataModel input type [#6877]
+
+- Fix variance propagation for IFU cube extraction in calculations of surface
+  brightness [#6892]
+
+flatfield
+---------
+
+- Set DO_NOT_USE DQ bit in flatfield if NO_FLAT_FIELD DQ bit is set in flat
+  reference file [#6882]
+
+pipeline
+--------
+
+- Add check to ensure SOSS ``extract_1d`` return is not None, to
+  avoid photom errors in ``Spec3Pipeline`` and ``Tso3Pipeline``. [#6863]
+
+- Updated the ``calwebb_image3`` pipeline to only science members from the
+  input ASN table. [#6875]
+
+ramp_fitting
+------------
+
+- Properly handles the returning of ``None`` from ramp fitting for fully
+  saturated exposures. [#6895]
+
+refpix
+------
+
+- Add code to refpix step to specify which parameters are used and which are
+  ignored, depending on data type [#6872]
+
+resample
+--------
+
+- Speed up the algorithm for computing the sampling wavelengths for the output
+  WCS in ``resample_spec``. [#6860]
+
+set_telescope_pointing
+----------------------
+
+- Fix SIAF default handling for missing SIAF values using pysiaf [#6869]
+
+skymatch
+--------
+
+- Reduced memory usage when input is an ASN. [#6874]
+
+source_catalog
+--------------
+
+- Fix bug in passing filename rather than datamodel [#6889]
+
+straylight
+----------
+
+- Add a check that input data is IFUImageModel [#6861]
+
+- Update straylight algorithm to use cross-artifact model [#6873]
+
+crds
+----
+
+- Explain about CRDS PUB. [#6862]
 
 1.5.2 (2022-05-20)
 ==================
+
+align_refs
+----------
+
+- Change median filter warning message to debug level [#6853]
 
 extract_1d
 ----------
 
 - In SOSS ATOCA, catch negative infinite values in centroid finder;
   catch spline-fit errors in first order flux estimate [#6854]
-
-align_refs
-----------
-
-- Change median filter warning message to debug level [#6853]
 
 linearity
 ---------
@@ -58,6 +251,7 @@ extract_1d
 
 jump
 ----
+
 - Enable multiprocessing in jump detection [#6845]
 
 lib
@@ -71,7 +265,7 @@ linearity
 - Adding feature to process ZEROFRAME data with the linearity step. [#6782]
 
 ramp_fitting
-----------
+------------
 
 - Adding feature to use ZEROFRAME for ramps that are fully saturated, but
   the ZEROFRAME data for that ramp is good. [#6782]
