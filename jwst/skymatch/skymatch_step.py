@@ -63,7 +63,10 @@ class SkyMatchStep(Step):
 
     def process(self, input):
         self.log.setLevel(logging.DEBUG)
-        self._is_asn = datamodels.util.is_association(input) or isinstance(input, str)
+        # for now turn off memory optimization until we have better machinery
+        # to handle outputs in a consistent way.
+        self._is_asn = False
+        # self._is_asn = datamodels.util.is_association(input) or isinstance(input, str)
 
         img = datamodels.ModelContainer(
             input,
@@ -113,15 +116,13 @@ class SkyMatchStep(Step):
         for im in images:
             if isinstance(im, SkyImage):
                 self._set_sky_background(
-                    im.meta['image_model'],
-                    im.sky,
+                    im,
                     "COMPLETE" if im.is_sky_valid else "SKIPPED"
                 )
             else:
                 for gim in im:
                     self._set_sky_background(
-                        gim.meta['image_model'],
-                        gim.sky,
+                        gim,
                         "COMPLETE" if gim.is_sky_valid else "SKIPPED"
                     )
 
@@ -180,11 +181,10 @@ class SkyMatchStep(Step):
                                  "present in image '{:s}' meta."
                                  .format(image_model.meta.filename))
 
-        data = np.array(image_model.data)
         wcs = deepcopy(image_model.meta.wcs)
 
         sky_im = SkyImage(
-            image=data,
+            image=image_model.data,
             wcs_fwd=wcs.__call__,
             wcs_inv=wcs.invert,
             pix_area=1.0,  # TODO: pixel area
@@ -205,15 +205,24 @@ class SkyMatchStep(Step):
 
         return sky_im
 
-    def _set_sky_background(self, image, sky, step_status):
+    def _set_sky_background(self, sky_image, step_status):
+        image = sky_image.meta['image_model']
+        sky = sky_image.sky
+
         if self._is_asn:
-            image = datamodel_open(image)
+            dm = datamodel_open(image)
+        else:
+            dm = image
 
         if step_status == "COMPLETE":
-            image.meta.background.method = str(self.skymethod)
-            image.meta.background.level = sky
-            image.meta.background.subtracted = self.subtract
-        image.meta.cal_step.skymatch = step_status
+            dm.meta.background.method = str(self.skymethod)
+            dm.meta.background.level = sky
+            dm.meta.background.subtracted = self.subtract
+            if self.subtract:
+                dm.data[...] = sky_image.image[...]
+
+        dm.meta.cal_step.skymatch = step_status
 
         if self._is_asn:
-            image.close()
+            dm.save(image)
+            dm.close()
