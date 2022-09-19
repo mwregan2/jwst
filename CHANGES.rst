@@ -8,6 +8,9 @@ assign_wcs
   uncaught exception when SIP approximation fails to reach desired
   accuracy. [#7036]
 
+jump
+----
+- First version of snowball/shower flagging for the jump step JP-#2645. This code will not be actiavated without either a set of calibration reference files or a command line override. [#7039]
 
 1.7.1 (2022-09-07)
 ==================
