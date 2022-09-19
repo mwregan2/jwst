@@ -109,4 +109,4 @@ threshold of normal cosmic rays.
 To constrain the effect of this halo the jump step will fit ellipses or circles that enclose the large events and expand the ellipses and circles by the input expansion_factor and mark them as jump.
 
 The two types of detectors respond differently. The large events in the near infrared detetcors are almost always circles with a central region that is saturated. The saturated core allows the search for smaller events without false positives.
-The MIRI detectors do not, in general, have a saturated center and are only rarely circular. Thus, we 
+The MIRI detectors do not, in general, have a saturated center and are only rarely circular. Thus, we fit the minimum enclosing ellipse and do not require that there are saturated pixels within the ellipse.

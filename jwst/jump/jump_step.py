@@ -26,9 +26,9 @@ class JumpStep(Step):
         after_jump_flag_time1 = float(default=0) # 1st flag groups after jump groups within specified time
         after_jump_flag_dn2 = float(default=0) # 2nd flag groups after jump above DN threshold
         after_jump_flag_time2 = float(default=0) # 2nd flag groups after jump groups within specified time
-        min_sat_area = float(default=1.0) # minimum required area for the central saturation of snowballs 
+        min_sat_area = float(default=1.0) # minimum required area for the central saturation of snowballs
         min_jump_area = float(default=5.0) # minimum area to trigger large events processing
-        expand_factor = float(default=2.0) # The expansion factor for the enclosing circles or ellipses 
+        expand_factor = float(default=2.0) # The expansion factor for the enclosing circles or ellipses
         use_ellipses = boolean(default=False) # Use an enclosing ellipse rather than a circle for MIRI showers
         sat_required_snowball = boolean(default=True) # Require the center of snowballs to be saturated
         expand_large_events = boolean(default=False) # must be True to trigger snowball and shower flagging
