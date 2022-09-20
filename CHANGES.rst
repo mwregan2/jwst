@@ -14,13 +14,6 @@ associations
   exception if path data is found.  Also, expanded documentation to make this
   more clear to users. [#7008]
 
-jump
-----
-- First version of snowball/shower flagging for the jump step
-  JP-#2645. This code will not be actiavated without either a set of
-  parameter reference files or a command line override. [#7039]
-
-
 resample
 --------
 
