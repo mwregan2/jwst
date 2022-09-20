@@ -1,4 +1,42 @@
-1.7.2 (unreleased)
+1.7.3 (unreleased)
+==================
+
+align_refs
+----------
+
+- Upgrade the median image replacement routine to also replace NaN pixels,
+  in addition to pixels flagged as bad. [#7044]
+
+associations
+------------
+
+- Enforce no path data in ``expname`` in association files by raising an
+  exception if path data is found.  Also, expanded documentation to make this
+  more clear to users. [#7008]
+
+jump
+----
+- First version of snowball/shower flagging for the jump step
+  JP-#2645. This code will not be actiavated without either a set of
+  calibration reference files or a command line override. [#7039]
+
+resample
+--------
+
+- Fix calculation of 'pixel_scale_ratio' when 'pixel_scale' parameter is
+  supplied, as well as fix a bug where this value was not being properly passed
+  to ResampleStep, and another where photometry keywords weren't being updated
+  correctly to reflect the correct pixel scale ratio. [#7033, #7048]
+
+
+tweakreg
+--------
+
+- Relaxed FITS WCS SIP fitting parameters for the tweakreg step to make the
+  code more robust. [#7038]
+
+
+1.7.2 (2022-09-12)
 ==================
 
 assign_wcs
@@ -8,9 +46,9 @@ assign_wcs
   uncaught exception when SIP approximation fails to reach desired
   accuracy. [#7036]
 
-jump
-----
-- First version of snowball/shower flagging for the jump step JP-#2645. This code will not be actiavated without either a set of calibration reference files or a command line override. [#7039]
+- Adjust default parameters for FITS SIP approximation to make it more robust
+  vis-a-vis MIRI imaging distortions. [#7037]
+
 
 1.7.1 (2022-09-07)
 ==================
@@ -224,6 +262,10 @@ tweakreg
   and ``abs_sigma``. [#6987]
 
 - Refactored code to work with changes in ``tweakwcs`` version 0.8.0. [#7006]
+
+source_catalog
+--------------
+- Reset input model (units, re-add backgroud) after source_catalog step. [#6942]
 
 1.6.2 (2022-07-19)
 ==================
