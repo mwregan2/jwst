@@ -20,6 +20,13 @@ jump
   JP-#2645. This code will not be actiavated without either a set of
   calibration reference files or a command line override. [#7039]
 
+jump
+----
+- First version of snowball/shower flagging for the jump step
+  JP-#2645. This code will not be actiavated without either a set of
+  parameter reference files or a command line override. [#7039]
+
+
 resample
 --------
 
