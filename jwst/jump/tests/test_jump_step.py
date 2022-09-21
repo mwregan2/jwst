@@ -58,6 +58,7 @@ def generate_nircam_reffiles(tmpdir_factory):
     gain_model.meta.subarray.xsize = xsize
     gain_model.meta.subarray.ysize = ysize
     gain_model.save(gainfile)
+    gain_model.close()
 
     inreadnoise = 5
     rnoise = np.ones(shape=(ysize, xsize), dtype=np.float64) * inreadnoise
@@ -68,6 +69,7 @@ def generate_nircam_reffiles(tmpdir_factory):
     readnoise_model.meta.subarray.xsize = xsize
     readnoise_model.meta.subarray.ysize = ysize
     readnoise_model.save(readnoisefile)
+    readnoise_model.close()
 
     return gainfile, readnoisefile
 
