@@ -39,7 +39,7 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
     gtime = input_model.meta.exposure.group_time
     after_jump_flag_n1 = int(after_jump_flag_time1 // gtime)
     after_jump_flag_n2 = int(after_jump_flag_time2 // gtime)
-    print("run detect jumps", "n1", after_jump_flag_n1, "n2", after_jump_flag_n2)
+    print("run detect jumps", "n1", after_jump_flag_n1, "n2", after_jump_flag_n2, "gtime", gtime)
     # Get 2D gain and read noise values from their respective models
     if reffile_utils.ref_matches_sci(input_model, gain_model):
         gain_2d = gain_model.data
@@ -65,7 +65,7 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
                                     after_jump_flag_dn1=after_jump_flag_dn1,
                                     after_jump_flag_n1=after_jump_flag_n1,
                                     after_jump_flag_dn2=after_jump_flag_dn2,
-                                    after_jump_flag_n2=after_jump_flag_n1,
+                                    after_jump_flag_n2=after_jump_flag_n2,
                                     min_sat_area=min_sat_area, min_jump_area=min_jump_area,
                                     expand_factor=expand_factor, use_ellipses=use_ellipses,
                                     sat_required_snowball=sat_required_snowball,
