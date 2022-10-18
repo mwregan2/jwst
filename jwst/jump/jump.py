@@ -11,7 +11,7 @@ log.setLevel(logging.DEBUG)
 def run_detect_jumps(input_model, gain_model, readnoise_model,
                      rejection_thresh, three_grp_thresh, four_grp_thresh,
                      max_cores, max_jump_to_flag_neighbors,
-                     min_jump_to_flag_neighbors, flag_4_neighbors, dqflags,
+                     min_jump_to_flag_neighbors, flag_4_neighbors,
                      after_jump_flag_dn1=0.0,
                      after_jump_flag_time1=0.0,
                      after_jump_flag_dn2=0.0,
