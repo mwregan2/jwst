@@ -21,8 +21,8 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
                      sat_required_snowball=True,
                      expand_large_events=False
                      ):
-    print("detect jumps", "dn1", after_jump_flag_dn1, "dn2", after_jump_flag_dn2)
-    print("detect jumps", "time1", after_jump_flag_time1, "time2", after_jump_flag_time2)
+    print("run detect jumps", "dn1", after_jump_flag_dn1, "dn2", after_jump_flag_dn2)
+    print("run detect jumps", "time1", after_jump_flag_time1, "time2", after_jump_flag_time2)
     # Runs `detect_jumps` in stcal
 
     # extract data and info from input_model to pass to detect_jumps
