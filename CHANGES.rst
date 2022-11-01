@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 1.7.3 (unreleased)
+=======
+1.8.0 (unreleased)
+>>>>>>> 25f29500fc2e8e236460853c11d54502580441f1
 ==================
 
 align_refs
@@ -14,14 +18,92 @@ associations
   exception if path data is found.  Also, expanded documentation to make this
   more clear to users. [#7008]
 
+<<<<<<< HEAD
 resample
 --------
 
+=======
+background
+----------
+
+- Update the background subtraction step to accept rateints (3D) input
+  background exposures, and updated docs accordingly. [#7049, #7055]
+
+combine_1d
+----------
+
+- Fixed a bug to properly exclude input spectra that have only 1
+  wavelength bin. [#7053]
+
+datamodels
+----------
+
+- Add metadata to core schema to carry association exptype into datamodels
+  loaded from associations into ModelContainer. Modify container method
+  ``ind_asn_type`` to query this metadata. [#7046]
+
+- Added writing S_RESFRI for residual_fringe and R_FRIFRQ for FRINGEFREQ reference file. 
+
+jump
+----
+
+- First version of snowball/shower flagging for the jump step
+  JP-#2645. This code will not be actiavated without either a set of
+  parameter reference files or a command line override. [#7039]
+
+master_background
+-----------------
+
+- Remove loading of datamodels directly from expnames listed in
+  ``asn_table``; instead sort input datamodels by new
+  ``model.meta.asn.exptype`` metadata. [#7046]
+
+pipeline
+--------
+
+- Added residual_fringe correction to the calspec2 pipeline. [#7051]
+
+resample
+--------
+
+- Fix a bug that was causing a WCS misalignment between the 'single' mosaic
+  image and the input CAL images. [#7042]
+
+- Move update_fits_wcs out of ResampleData and into ResampleStep. [#7042]
+
+>>>>>>> 25f29500fc2e8e236460853c11d54502580441f1
 - Fix calculation of 'pixel_scale_ratio' when 'pixel_scale' parameter is
   supplied, as well as fix a bug where this value was not being properly passed
   to ResampleStep, and another where photometry keywords weren't being updated
   correctly to reflect the correct pixel scale ratio. [#7033, #7048]
 
+<<<<<<< HEAD
+=======
+resample_spec
+-------------
+
+- Update computation of target RA/Dec for slit spectra to handle data
+  containing negative spectral traces (due to nodded background subtraction)
+  in a more robust way. [#7047]
+
+ - Move update_slit_metadata out of ResampleData and into ResampleSpecStep. [#7042]
+
+
+residual_fringe
+---------------
+
+- Removed reading and saving data as a ModelContainer. Data now read in and saved
+as an IFUImageModel.  [#7051]
+
+
+set_telescope_pointing
+----------------------
+
+- Migrate set_telescope_pointing to pysiaf-based exclusively [#6993]
+
+- Return non-zero status from the set_telescope_pointing command-line when an error occurs [#7056]
+
+>>>>>>> 25f29500fc2e8e236460853c11d54502580441f1
 
 tweakreg
 --------

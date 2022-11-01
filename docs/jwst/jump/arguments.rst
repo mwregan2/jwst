@@ -50,7 +50,11 @@ The ``jump`` step has five optional arguments that can be set by the user:
 * ``--after_jump_flag_time1``: A floating point value in units of seconds that gives the
   time since the ramp jump to flag groups as ramp jumps for the 2nd after jump flagging.
 
+<<<<<<< HEAD
 * ``--expand_large_events``:  A boolean parameter that controls whether the jump step will expand the number of pixels that are flagged around large cosmic ray events. These are know as "snowballs" in the near-infrared detectors and "showers"for the MIRI detectors. In General, this should be set to True.
+=======
+* ``--expand_large_events``:  A boolean parameter that controls whether the jump step will expand the number of pixels that are flagged around large cosmic ray events. These are know as "snowballs" in the near-infrared detectors and "showers" for the MIRI detectors. In general, this should be set to True.
+>>>>>>> 25f29500fc2e8e236460853c11d54502580441f1
 
 * ``--min_jump_area``: The minimum number of contiguous pixels needed to trigger the expanded flagging of large cosmic rays events.
 
