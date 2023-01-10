@@ -89,6 +89,7 @@ standards = [
     MakePars('pool_029_mir_lrsfs_nonod'),
     MakePars('pool_030_mir_lrs_nods_bkg'),
     MakePars('pool_031_mir_lrs_nonod_bkg'),
+    MakePars('pool_032_nircam_wfss'),
 ]
 
 
@@ -139,7 +140,7 @@ def test_against_standard(rtdata, standard_pars, slow):
         pool = combine_pools([
             t_path(Path('data') / (standard_pars.pool_root + '.csv'))
         ])
-        Main(args, pool=pool)
+        Main.cli(args, pool=pool)
 
         # Retrieve the truth files
         truth_paths = []

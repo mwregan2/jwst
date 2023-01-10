@@ -304,12 +304,15 @@ class IFUCubeData():
         # center of spaxels
         self.xcoord = np.zeros(self.naxis1)
         xstart = xi_min + self.cdelt1 / 2.0
-
         self.xcoord = np.arange(start=xstart, stop=xstart + self.naxis1 * self.cdelt1, step=self.cdelt1)
 
         self.ycoord = np.zeros(self.naxis2)
         ystart = eta_min + self.cdelt2 / 2.0
         self.ycoord = np.arange(start=ystart, stop=ystart + self.naxis2 * self.cdelt2, step=self.cdelt2)
+        # depending on the naxis and cdelt values the x,ycoord can have 1 more element than naxis.
+        # Clean up arrays dropping extra values at the end.
+        self.xcoord = self.xcoord[0:self.naxis1]
+        self.ycoord = self.ycoord[0:self.naxis2]
 
         xv,yv = np.meshgrid(self.xcoord, self.ycoord)
         self.xcenters = xv.flatten()
@@ -334,7 +337,7 @@ class IFUCubeData():
             self.crpix3 = 1.0
             zstart = self.lambda_min + self.cdelt3 / 2.0
             self.zcoord = np.arange(start=zstart, stop=self.lambda_max, step=self.cdelt3)
-
+            self.zcoord = self.zcoord[0:self.naxis3]
         else:
             self.naxis3 = len(self.wavelength_table)
             self.zcoord = np.asarray(self.wavelength_table)
@@ -1207,7 +1210,7 @@ class IFUCubeData():
                                                                       input_model.meta.wcs.output_frame.name)
 
                 temp_ra1, temp_dec1, lam_temp = alpha_beta2world(0, 0, lam_med)
-                temp_ra2, temp_dec2, lam_temp = alpha_beta2world(0, 2, lam_med)
+                temp_ra2, temp_dec2, lam_temp = alpha_beta2world(2, 0, lam_med)
 
             elif self.instrument == 'NIRSPEC':
                 slice_wcs = nirspec.nrs_wcs_set_input(input_model, 0)
@@ -1224,7 +1227,7 @@ class IFUCubeData():
             # ________________________________________________________________________________
             # temp_dec1 is in degrees
             dra, ddec = (temp_ra2 - temp_ra1) * np.cos(temp_dec1 * np.pi / 180.0), (temp_dec2 - temp_dec1)
-            self.rot_angle = np.arctan2(dra, ddec) * 180. / np.pi
+            self.rot_angle = 90 + np.arctan2(dra, ddec) * 180. / np.pi
             log.info(f'Rotation angle between ifu and sky: {self.rot_angle}')
 
 # ________________________________________________________________________________
@@ -1815,11 +1818,13 @@ class IFUCubeData():
                 across1,along1,lam1 = detector2slicer(x, y - 0.49 * pixfrac)
                 across2,along2,lam2 = detector2slicer(x, y + 0.49 * pixfrac)
 
+                # Ensure that our ordering wraps around the footprint instead of crossing
+                # footprint on a diagonal
                 ra1, dec1, _ = slicer2world(across1 - across_width * pixfrac / 2, along1, lam1)
                 ra2, dec2, _ = slicer2world(across1 + across_width * pixfrac / 2, along1, lam1)
 
-                ra3, dec3, _ = slicer2world(across2 - across_width * pixfrac / 2, along2, lam2)
-                ra4, dec4, _ = slicer2world(across2 + across_width * pixfrac / 2, along2, lam2)
+                ra3, dec3, _ = slicer2world(across2 + across_width * pixfrac / 2, along2, lam2)
+                ra4, dec4, _ = slicer2world(across2 - across_width * pixfrac / 2, along2, lam2)
 
                 # near the slice boundaries the corners can become Nan - do not use pixels with
                 # Nan corners
@@ -1837,7 +1842,7 @@ class IFUCubeData():
                 ra2 = ra2[final]
                 dec2 = dec2[final]
                 ra3 = ra3[final]
-                dec3 = dec4[final]
+                dec3 = dec3[final]
                 ra4 = ra4[final]
                 dec4 = dec4[final]
                 dwave = dwave[final]
@@ -2104,59 +2109,10 @@ class IFUCubeData():
                     var[lowcov[zz], :, :] = 0
                     dq[lowcov[zz], :, :] = dqflags.pixel['DO_NOT_USE'] + dqflags.pixel['NON_SCIENCE']
 
-        # clean up empty wavelength planes except for single case
-        if self.output_type != 'single':
-            remove_start = 0
-            k = 0
-            found = 0
-            while (k < self.naxis3 and found == 0):
-                flux_at_wave = flux[k, :, :]
-                sum = np.nansum(flux_at_wave)
-                if sum == 0.0:
-                    remove_start = remove_start + 1
-                else:
-                    found = 1
-                    break
-                k = k + 1
-
-            remove_final = 0
-            found = 0
-            k = self.naxis3 - 1
-            while (k > 0 and found == 0):
-                flux_at_wave = flux[k, :, :]
-                sum = np.nansum(flux_at_wave)
-                if sum == 0.0:
-                    remove_final = remove_final + 1
-                else:
-                    found = 1
-                    break
-                k = k - 1
-
-            remove_total = remove_start + remove_final
-            if remove_total >= self.naxis3:
-                log.error('All the wavelength planes have zero data, check input data')
-                # status of 1 sets up failure of IFU cube building
-                # the input to cube_build  is returned instead of an zero filled ifucube
-                status = 1
-
-            if remove_total > 0 and remove_total < self.naxis3:
-                log.info('Number of wavelength planes removed with no data: %i',
-                         remove_total)
-
-                flux = flux[remove_start: (self.naxis3 - remove_final), :, :]
-                wmap = wmap[remove_start: (self.naxis3 - remove_final), :, :]
-                dq = dq[remove_start: (self.naxis3 - remove_final), :, :]
-                var = var[remove_start: (self.naxis3 - remove_final), :, :]
-
-                if self.linear_wavelength:
-                    self.crval3 = self.zcoord[remove_start]
-                else:
-                    self.wavelength_table = self.wavelength_table[remove_start: (self.naxis3 - remove_final)]
-                    self.crval3 = self.wavelength_table[0]
-
-                # update WCS information if removing wavelengths from the IFU Cube
-                self.naxis3 = self.naxis3 - (remove_start + remove_final)
-        # end removing empty wavelength planes
+        # Set np.nan values wherever the DO_NOT_USE flag is set
+        dnu = np.where((dq & dqflags.pixel['DO_NOT_USE']) != 0)
+        flux[dnu] = np.nan
+        var[dnu] = np.nan
 
         var = np.sqrt(var)
         if self.linear_wavelength:

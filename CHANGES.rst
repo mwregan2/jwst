@@ -1,4 +1,455 @@
-1.6.3 (unreleased)
+1.9.3 (unreleased)
+==================
+
+wfss_contam
+-----------
+
+- Open image models in a "with" context to keep models open while accessing contents [#7425]
+
+1.9.2 (2023-01-04)
+==================
+
+documentation
+-------------
+
+- Remove references to pub server [#7421]
+
+1.9.1 (2023-01-03)
+==================
+
+associations
+------------
+
+- Modify entrypoint functions to not return anything unless failure [#7418]
+
+1.9.0 (2022-12-27)
+==================
+
+assign_wcs
+----------
+
+- Fix computation of bounding box corners for WFSS grism 2D cutouts. [#7312]
+
+- Updated the loading of NIRSpec MSA configuration data to assign the source_id
+  for each slitlet from the shutter entry that contains the primary/main source. [#7379]
+
+- Added approximated imaging FITS WCS to the grism image headers. [#7373, #7412]
+
+associations
+------------
+
+- Moved text dump of associations to happen when using the '-D' option,
+  rather than the '-v' option. [#7068]
+
+- Added background association candidates to list of level 3 candidate
+  types requiring members from more than one observation [#7329]
+
+- Refactor item reprocessing for efficiency. Also refactor how background associations are configured [#7332]
+
+- Suppress the use of association candidates for level 3 products marked with WFSC_LOS_JITTER. [#7339]
+
+- Split NIRISS WFSS dual grism (gr150r+gr150c) associations into separate asn's for each grism. [#7351]
+
+- Remove defaulting of the is_psf column [#7356]
+
+- Fix association registry ListCategory enum bug under Python 3.11 [#7370]
+
+- Fix NIRSpec IFU NOD background subtract and include leakcal in the Level2 associations. [#7405]
+
+- Do not clobber reprocessing lists when Level 2 rules are operating on 'c' type candidates [#7410]
+
+combine_1d
+----------
+
+- Sort combined wavelength array before building spectral wcs [#7374]
+
+cube_build
+----------
+
+- Fix a bug in 3d drizzle code for NIRSpec IFU.  [#7306]
+
+- Change fill value for regions of SCI and ERR extensions with no data
+  from 0 to nan. [#7337]
+
+- Remove code trimming zero-valued planes from cubes, so that cubes of fixed length will always
+  be produced. Move nan-value setting to below spectral tear cleanup. [#7391]
+
+- Fix several bugs in memory management in the C code for cube build which
+  would result in attempts to deallocate memory that was never allocated
+  resulting in core dump. [#7408]
+
+datamodels
+----------
+
+- Add subarray keywords in the ``filteroffset`` schema [#7317]
+
+- Remove duplicate enum entries for PATTTYPE (dither pattern type) values [#7331]
+
+- Added ``SUB400X256ALWB`` to subarray enum list of allowed NIRCam values. This
+  replaces ``SUB320ALWB``, which is retained in the ``obsolete`` enum list.
+  [#7361]
+
+- Added var_flat to the initialization in slit.py [#7397]
+
+documentation
+-------------
+
+- Update deprecation notice to name the CRDS_PATH variable appropriately. [#7392]
+
+extract_1d
+----------
+
+- Fix IFU spectral extraction code to not fail on NaN fill values
+  that now populate empty regions of the data cubes. [#7337]
+
+- Re-organized the way extract1d reference files are read in based
+  on type of file and added more checks when reading files. [#7369]
+
+- Update ATOCA algorithm for NIRISS SOSS extraction to development version;
+  includes increased robustness to various data issues, wavelength grid storage in
+  a new datamodel, and increased parameter control of ATOCA behavior. [#6945]
+
+- replace deprecated usages of ``np.int()`` to fix Numpy errors [#7403]
+
+extract_2d
+----------
+
+- Fix slice limits used in extraction of WFSS 2D cutouts. [#7312]
+
+- Add keywords for source RA and Dec for WFSS extractions [#7372]
+
+flatfield
+---------
+
+- JP-2993 Update the flat-field ERR computation for FGS guider mode exposures to
+  combine the input ERR and the flat field ERR in quadrature. [#7346]
+
+general
+-------
+
+- Add requirement for asdf-transform-schemas >= 0.3.0 [#7352]
+
+- Reorganize and expand user documentation, update docs landing page. Add install instructions, quickstart guide, and elaborate on running
+  pipeline in Python and with strun. [#6919]
+
+- fixed wrong Python version expected in ``__init__.py`` [#7366]
+
+- replace ``flake8`` with ``ruff`` [#7054]
+
+- Fix deprecation warnings introduced by ``pytest`` ``7.2`` ahead of ``8.0`` [#7325]
+
+guider_cds
+----------
+
+- Calculate and output the ERR array based on the gain and readnoise
+  variances, and force the stack mode to use the default gain and readnoise
+  pixel values. [#7309]
+
+lib
+---
+
+- Fix circular import in ``lib.wcs_utils``. [#7330]
+
+outlier_detection
+-----------------
+
+- Fix deprecated calls to photutils.CircularAnnulus. [#7407]
+
+photom
+------
+
+- Cutout pixel area array to match the subarray of the science data. [#7319]
+
+- Remove duplicated division of pixel area during photometric calibration
+  of NIRSpec IFU data with EXTENDED source type; correct units in pixel area
+  division to sr from square arcseconds [#7336]
+
+ramp_fitting
+------------
+
+- Change the propagation of the SATURATED flag to be done only for complete
+  saturation. [#7363, spacetelescope/stcal#125]
+
+- Update CI tests for ramp fitting due to setting pixels to NaN with no usable
+  data to compute slopes in the the rate and rateints products.  Previously,
+  this data was set to zero. [#7389, spacetelescope/stcal#131]
+
+resample
+--------
+
+- Enhanced spectral output WCS construction to guard against nearly identical
+  points. [#7321]
+
+- Added a utility function ``decode_context()`` to help identify all input
+  images that have contributed with flux to an output (resampled)
+  pixel. [#7345]
+
+- Fixed a bug in the definition of the output WCS for NIRSpec. [#7359]
+
+set_telescope_pointing
+----------------------
+
+- Pin PRD versions for tests that are not testing changes in PRD. [#7380]
+
+tweakreg
+--------
+
+- Do not skip tweakreg step in ``Image3Pipeline`` when ``ModelContainer``
+  has only one group. This is a continuation of PR6938. [#7326]
+
+- Fix a bug in the logic that handles inputs with a single image group when
+  an absolute reference catalog is provided. [#7328]
+
+- Pinned ``tweakwcs`` version to 0.8.1 that fixes a bug in how 2D histogram's
+  bin size is computed. This affects pre-alignment performed before source
+  matching. [#7417]
+
+wfss_contam
+-----------
+
+- Pull 2D cutout offsets from SlitModel subarray metadata rather than
+  grism WCS transform. [#7343]
+
+1.8.5 (2022-12-12)
+==================
+
+documentation
+-------------
+
+- Update deprecation notice to name the CRDS_PATH variable appropriately. [#7392]
+
+1.8.4 (2022-11-15)
+==================
+
+
+documentation
+-------------
+
+- Update deprecation notice with copyedit changes [#7348]
+
+- Clarify how to manage a local CRDS cache [#7350]
+
+
+1.8.3 (2022-11-11)
+==================
+
+documentation
+-------------
+
+- CRDS PUB deprecation notice and transition documentation [#7342]
+
+1.8.2 (2022-10-20)
+==================
+
+set_telescope_pointing
+----------------------
+
+- Revert "JP-2940 Return non-zero status from the set_telescope_pointing" [#7301]
+
+1.8.1 (2022-10-17)
+==================
+
+associations
+------------
+
+- Expand the sequence field in a file name for association files from
+  3 characters to 5 characters. [#7061]
+
+cube_build
+----------
+
+- Changed IFUALIGN convention for MIRI so that isobeta is along cube X instead of
+  isoalpha along cube Y. [#7058]
+
+datamodels
+----------
+
+- Update the definition of the NOUTPUTS keyword to include "5" as an allowed value.
+  [#7062]
+
+- Switch to using new ``asdf.resources`` entry-point mechanism for
+  registering schemas. [#7057]
+
+- Fix handling of ASN directory path by the ``ModelContainer``. [#7071]
+
+resample
+--------
+
+- Make the GWCSDrizzle.outcon attribute a property with setter [#7295]
+
+set_telescope_pointing
+----------------------
+
+- Allow XML_DATA usage to override PRD specification [#7063]
+
+1.8.0 (2022-10-10)
+==================
+
+align_refs
+----------
+
+- Upgrade the median image replacement routine to also replace NaN pixels,
+  in addition to pixels flagged as bad. [#7044]
+
+associations
+------------
+
+- Enforce no path data in ``expname`` in association files by raising an
+  exception if path data is found.  Also, expanded documentation to make this
+  more clear to users. [#7008]
+
+background
+----------
+
+- Update the background subtraction step to accept rateints (3D) input
+  background exposures, and updated docs accordingly. [#7049, #7055]
+
+combine_1d
+----------
+
+- Fixed a bug to properly exclude input spectra that have only 1
+  wavelength bin. [#7053]
+
+dark_current
+------------
+
+- Bug fix for computation of the total number of frames when science data use
+  on-board frame averaging and/or group gaps. [spacetelescope/stcal#121]
+
+datamodels
+----------
+
+- Add metadata to core schema to carry association exptype into datamodels
+  loaded from associations into ModelContainer. Modify container method
+  ``ind_asn_type`` to query this metadata. [#7046]
+
+- Added S_RESFRI and R_FRIFRQ keywords for the residual fringe correction
+  step and its reference file. [#7051]
+
+jump
+----
+
+- First version of snowball/shower flagging for the jump step
+  JP-2645. This code will not be actiavated without either a set of
+  parameter reference files or a command line override. [#7039]
+
+master_background
+-----------------
+
+- Remove loading of datamodels directly from expnames listed in
+  ``asn_table``; instead sort input datamodels by new
+  ``model.meta.asn.exptype`` metadata. [#7046]
+
+pipeline
+--------
+
+- Added residual_fringe correction to the calspec2 pipeline. [#7051]
+
+resample
+--------
+
+- Fix a bug that was causing a WCS misalignment between the 'single' mosaic
+  image and the input CAL images. [#7042]
+
+- Move update_fits_wcs out of ResampleData and into ResampleStep. [#7042]
+
+- Fix calculation of 'pixel_scale_ratio' when 'pixel_scale' parameter is
+  supplied, as well as fix a bug where this value was not being properly passed
+  to ResampleStep, and another where photometry keywords weren't being updated
+  correctly to reflect the correct pixel scale ratio. [#7033, #7048]
+
+resample_spec
+-------------
+
+- Update computation of target RA/Dec for slit spectra to handle data
+  containing negative spectral traces (due to nodded background subtraction)
+  in a more robust way. [#7047]
+
+- Move update_slit_metadata out of ResampleData and into ResampleSpecStep. [#7042]
+
+
+residual_fringe
+---------------
+
+- Removed reading and saving data as a ModelContainer. Data now read in and saved
+as an IFUImageModel.  [#7051]
+
+
+set_telescope_pointing
+----------------------
+
+- Migrate set_telescope_pointing to pysiaf-based exclusively [#6993]
+
+- Return non-zero status from the set_telescope_pointing command-line when an error occurs [#7056]
+
+tweakreg
+--------
+
+- Relaxed FITS WCS SIP fitting parameters for the tweakreg step to make the
+  code more robust. [#7038]
+
+- Added support for user-provided catalog files. [#7022]
+
+1.7.2 (2022-09-12)
+==================
+
+assign_wcs
+----------
+
+- Fixed a bug in ``assign_wcs`` due to which the step could crash due to
+  uncaught exception when SIP approximation fails to reach desired
+  accuracy. [#7036]
+
+- Adjust default parameters for FITS SIP approximation to make it more robust
+  vis-a-vis MIRI imaging distortions. [#7037]
+
+
+1.7.1 (2022-09-07)
+==================
+
+engdb_tools
+-----------
+
+- Update HTTP status list to include 4xx issues [#7026]
+
+- Add retries and timeout parameters to engineering access calls [#7025]
+
+photom
+------
+
+- Fix bug in handling of NIRSpec FS data, so that the wavelength-dependent
+  flux conversion factors get computed correctly for both point-source and
+  extended-source data. [#7019]
+
+straylight
+----------
+
+- Fix a bug in calibrated MRS slopes from small pedestal rate offsets between
+  exposures by reintroducing zeropoint subtraction using dark regions of MRS detectors. [#7013]
+
+tweakreg
+--------
+
+- Renamed ``gaia`` suffix to ``abs`` for the absolute astrometry
+  parameters. Specifically, ``gaia_catalog``->``abs_refcat``,
+  ``save_gaia_catalog``->``save_abs_catalog``. [#7023]
+
+- Removed ``align_to_gaia`` boolean step parameter since it now can be
+  indicated via ``abs_refcat`` parameter. When ``abs_refcat`` is None or an
+  empty string, alignment to an absolute astrometric catalog will be turned
+  OFF. When ``abs_refcat`` is a non-empty string, alignment to an absolute
+  astrometric reference catalog will be turned ON. [#7023, #7029]
+
+- Bug fix: removed ``min_gaia`` which should have been removed in the
+  PR 6987. [#7023]
+
+wfss_contam
+-----------
+
+- Update WCS transform attribute names for 2D source cutout offsets,
+  to stay in synch with newer wcs models. [#7028]
+
+1.7.0 (2022-09-01)
 ==================
 
 general
@@ -26,13 +477,20 @@ assign_wcs
   module to allow easy updating of FITS WCS stored in ``datamodel.meta.wcsinfo``
   from ``datamodel``'s GWCS. [#6935]
 
+- Populate ``WAVELENGTH`` extension for MIRI LRS slitless data [#6964] [#7005]
+
+associations
+------------
+
+- Refactor Asn_Lv2WFSS to better descriminate what direct images should be used [#7010]
+
 cube_build
 ----------
 
 - Remove trailing dash from IFU cube filenames built from all subchannels.
   Also sort subchannels present by inverse alphabetical order to ensure
   consistent filename creation across processing runs. [#6959]
-  
+
 - Re-wrote c code for NIRSpec dq flagging.[#6981]
 
 - For moving target data removed using  s_region values in cal files to
@@ -45,6 +503,8 @@ cube_build
 
 - Add a check in the process of building a cube to confirm that there is valid data on the detector. [#6998]
 
+- Fix a bug when user changes the spatial scale [#7002]
+
 datamodels
 ----------
 
@@ -55,6 +515,11 @@ datamodels
 
 - Add the ``P_READPA`` keyword to the ``ReadnoiseModel`` schema [#6973]
 
+- Change name of ``P_READPA`` keyword in datamodel metadata to ``p_readpatt``
+  to be consistent with other pattern keyword names [#7001]
+
+- Add "BACKGROUND" to the list of allowed values for the ``PATTTYPE`` keyword
+  for MIRI coronagraphic mode [#7009]
 
 documentation
 -------------
@@ -119,6 +584,11 @@ skymatch
 - Fix a bug so that computed background values eare subtracted from the image
   data when ``subtract=True``. [#6934]
 
+transforms
+----------
+
+- Updated the NIRISS WFSS transforms from direct to grism image to V4.[#6803]
+
 tweakreg
 --------
 
@@ -133,12 +603,23 @@ tweakreg
   alignment (which needs 2 images) instead of skipping the entire
   step. [#6938]
 
-
 - Added support for user-supplied reference catalog for stage 2 of alignment
   in the ``tweakreg`` step. This catalog, if provided, will be used instead
   of the 'GAIA' catalogs for aligning all input images together as one single
   group. [#6946]
 
+- Exposed ``tweakreg_catalog`` parameters in ``tweakreg`` [#7003]
+
+- exposed additional parameters for absolute astrometry:
+  ``abs_minobj``, ``abs_searchrad``, ``abs_use2dhist``, ``abs_separation``,
+  ``abs_tolerance``, ``abs_fitgeometry``, ``abs_nclip``,
+  and ``abs_sigma``. [#6987]
+
+- Refactored code to work with changes in ``tweakwcs`` version 0.8.0. [#7006]
+
+source_catalog
+--------------
+- Reset input model (units, re-add backgroud) after source_catalog step. [#6942]
 
 1.6.2 (2022-07-19)
 ==================

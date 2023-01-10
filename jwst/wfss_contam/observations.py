@@ -18,7 +18,7 @@ class Observation:
 
     def __init__(self, direct_images, segmap_model, grism_wcs, filter, ID=0,
                  sed_file=None, extrapolate_sed=False,
-                 boundaries=[], renormalize=True, max_cpu=1):
+                 boundaries=[], offsets=[0, 0], renormalize=True, max_cpu=1):
 
         """
         Initialize all data and metadata for a given observation. Creates lists of
@@ -61,6 +61,8 @@ class Observation:
         self.cache = False
         self.renormalize = renormalize
         self.max_cpu = max_cpu
+        self.xoffset = offsets[0]
+        self.yoffset = offsets[1]
 
         # Set the limits of the dispersed image to be simulated
         if len(boundaries) == 0:
@@ -115,36 +117,37 @@ class Observation:
         for dir_image_name in self.dir_image_names:
 
             log.info(f"Using direct image {dir_image_name}")
-            dimage = datamodels.open(dir_image_name).data
+            with datamodels.open(dir_image_name) as model:
+                dimage = model.data
 
-            if self.sed_file is None:
-                # Default pipeline will use sed_file=None, so we need to compute
-                # photometry values that used to come from HST-style header keywords.
-                # Set pivlam, in units of microns, based on filter name.
-                pivlam = float(self.filter[1:4]) / 100.
+                if self.sed_file is None:
+                    # Default pipeline will use sed_file=None, so we need to compute
+                    # photometry values that used to come from HST-style header keywords.
+                    # Set pivlam, in units of microns, based on filter name.
+                    pivlam = float(self.filter[1:4]) / 100.
 
-                # Use pixel fluxes from the direct image.
-                self.fluxes[pivlam] = []
-                for i in range(len(self.IDs)):
-                    # This loads lists of pixel flux values for each source
-                    # from the direct image
-                    self.fluxes[pivlam].append(dimage[self.ys[i], self.xs[i]])
+                    # Use pixel fluxes from the direct image.
+                    self.fluxes[pivlam] = []
+                    for i in range(len(self.IDs)):
+                        # This loads lists of pixel flux values for each source
+                        # from the direct image
+                        self.fluxes[pivlam].append(dimage[self.ys[i], self.xs[i]])
 
-            else:
-                # Use an SED file. Need to normalize the object stamps.
-                for ID in self.IDs:
-                    vg = self.seg == ID
-                    dnew = dimage
-                    if self.renormalize:
-                        sum_seg = np.sum(dimage[vg])  # But normalize by the whole flux
-                        if sum_seg != 0:
-                            dimage[vg] /= sum_seg
-                    else:
-                        log.debug("not renormalizing sources to unity")
+                else:
+                    # Use an SED file. Need to normalize the object stamps.
+                    for ID in self.IDs:
+                        vg = self.seg == ID
+                        dnew = dimage
+                        if self.renormalize:
+                            sum_seg = np.sum(dimage[vg])  # But normalize by the whole flux
+                            if sum_seg != 0:
+                                dimage[vg] /= sum_seg
+                        else:
+                            log.debug("not renormalizing sources to unity")
 
-                self.fluxes["sed"] = []
-                for i in range(len(self.IDs)):
-                    self.fluxes["sed"].append(dnew[self.ys[i], self.xs[i]])
+                    self.fluxes["sed"] = []
+                    for i in range(len(self.IDs)):
+                        self.fluxes["sed"].append(dnew[self.ys[i], self.xs[i]])
 
     def disperse_all(self, order, wmin, wmax, sens_waves, sens_resp, cache=False):
         """
@@ -170,7 +173,7 @@ class Observation:
             self.cached_object = {}
 
         # Initialize the simulated dispersed image
-        self.simulated_image = np.zeros(self.dims, np.float)
+        self.simulated_image = np.zeros(self.dims, float)
 
         # Loop over all source ID's from segmentation map
         for i in range(len(self.IDs)):
@@ -185,7 +188,6 @@ class Observation:
                 self.cached_object[i]['miny'] = []
                 self.cached_object[i]['maxy'] = []
 
-            # Disperse object "i"
             self.disperse_chunk(i, order, wmin, wmax, sens_waves, sens_resp)
 
     def disperse_chunk(self, c, order, wmin, wmax, sens_waves, sens_resp):
@@ -249,7 +251,7 @@ class Observation:
             pars_i = (xc, yc, width, height, lams, fluxes, self.order,
                       self.wmin, self.wmax, self.sens_waves, self.sens_resp,
                       self.seg_wcs, self.grism_wcs, ID, self.dims[::-1], 2,
-                      self.extrapolate_sed, self.xstart, self.ystart)
+                      self.extrapolate_sed, self.xoffset, self.yoffset)
 
             pars.append(pars_i)
             # now have full pars list for all pixels for this object
@@ -265,7 +267,7 @@ class Observation:
                 all_res.append(dispersed_pixel(*pars[i]))
 
         # Initialize blank image for this source
-        this_object = np.zeros(self.dims, np.float)
+        this_object = np.zeros(self.dims, float)
 
         nres = 0
         for pp in all_res:
@@ -309,7 +311,7 @@ class Observation:
         if not self.cache:
             return
 
-        self.simulated_image = np.zeros(self.dims, np.float)
+        self.simulated_image = np.zeros(self.dims, float)
 
         for i in range(len(self.IDs)):
             this_object = self.disperse_chunk_from_cache(i, trans=trans)
@@ -325,7 +327,7 @@ class Observation:
         time1 = time.time()
 
         # Initialize blank image for this object
-        this_object = np.zeros(self.dims, np.float)
+        this_object = np.zeros(self.dims, float)
 
         if trans is not None:
             log.debug("Applying a transmission function...")

@@ -30,7 +30,11 @@ For image display with software like DS9 that relies on specific WCS information
 approximation to the WCS is fit. The results are FITS keywords stored in
 ``model.meta.wcsinfo``. This is not an exact fit, but is accurate to ~0.25 pixel and is sufficient
 for display purposes. This step, which occurs for imaging modes early, is performed by default but
-can be switched off, and parameters controlling the fit can also be adjusted. 
+can be switched off, and parameters controlling the fit can also be adjusted.
+
+
+``jwst.assign_wcs`` is based on `gwcs <https://gwcs.readthedocs.io/en/latest/>`__ and
+uses `asdf <http://asdf.readthedocs.io/en/latest/>`__.
 
 
 
@@ -123,12 +127,21 @@ For NIRISS WFSS data the reference files contain a reference value for the filte
 position angle. The trace is rotated about an angle which is the difference between
 the reference and actual angles.
 
-``jwst.assign_wcs`` is based on gwcs and uses the modeling, units and coordinates subpackages in astropy.
+For WFSS modes (``NIS_WFSS``, ``NRC_WFSS``), an approximation of the GWCS object
+associated with a direct image with the same instrument configuration as the grism image
+is saved as FITS WCS in the headers of grism images.
 
-- `gwcs <https://github.com/spacetelescope/gwcs>`__
+Corrections Due to Spacecraft Motion
+------------------------------------
 
-- `numpy <http://www.numpy.org/>`__
+The WCS transforms contain two corrections due to motion of the observatory.
 
-- `astropy <http://www.astropy.org/>`__
+Absolute velocity aberration is calculated onboard when acquiring the guide star, but
+differential velocity aberration effects are calculated during the ``assign_wcs`` step.
+This introduces corrections in the conversion from sky coordinates to observatory
+V2/V3 coordinates, and is stored in the WCS under the ``v2v3vacorr`` frame.
 
-- `asdf <http://asdf.readthedocs.io/en/latest/>`__
+For spectroscopic data, a relativistic Doppler correction is applied to all wavelengths to place
+observations into the barycentric reference frame. This correction factor is applied to the WCS
+wavelength solution created during the ``assign_wcs`` step, such that extracted spectral products
+will have wavelength arrays in the barycentric frame.

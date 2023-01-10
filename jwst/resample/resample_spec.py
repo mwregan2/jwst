@@ -6,7 +6,7 @@ from scipy.optimize import minimize_scalar
 from astropy import coordinates as coord
 from astropy import units as u
 from astropy.modeling.models import (
-    Mapping, Tabular1D, Linear1D, Pix2Sky_TAN, RotateNative2Celestial, Identity
+    Mapping, Tabular1D, Linear1D, Pix2Sky_TAN, RotateNative2Celestial, Const1D
 )
 from astropy.modeling.fitting import LinearLSQFitter
 from gwcs import wcstools, WCS
@@ -99,28 +99,38 @@ class ResampleSpecData(ResampleData):
         else:
             refmodel = self.input_models[0]
 
+        # make a copy of the data array for internal manipulation
+        refmodel_data = refmodel.data.copy()
+        # renormalize to the minimum value, for best results when
+        # computing the weighted mean below
+        refmodel_data -= np.nanmin(refmodel_data)
+
+        # save the wcs of the reference model
         refwcs = refmodel.meta.wcs
 
+        # setup the transforms that are needed
         s2d = refwcs.get_transform('slit_frame', 'detector')
         d2s = refwcs.get_transform('detector', 'slit_frame')
         s2w = refwcs.get_transform('slit_frame', 'world')
 
-        # estimate position of the target without relying in the meta.target:
+        # estimate position of the target without relying on the meta.target:
+        # compute the mean spatial and wavelength coords weighted
+        # by the spectral intensity
         bbox = refwcs.bounding_box
-
         grid = wcstools.grid_from_bounding_box(bbox)
         _, s, lam = np.array(d2s(*grid))
-        sd = s * refmodel.data
-        ld = lam * refmodel.data
+        sd = s * refmodel_data
+        ld = lam * refmodel_data
         good_s = np.isfinite(sd)
         if np.any(good_s):
-            total = np.sum(refmodel.data[good_s])
+            total = np.sum(refmodel_data[good_s])
             wmean_s = np.sum(sd[good_s]) / total
             wmean_l = np.sum(ld[good_s]) / total
         else:
             wmean_s = 0.5 * (refmodel.slit_ymax - refmodel.slit_ymin)
             wmean_l = d2s(*np.mean(bbox, axis=1))[2]
 
+        # transform the weighted means into target RA/Dec
         targ_ra, targ_dec, _ = s2w(0, wmean_s, wmean_l)
 
         ref_lam = _find_nirspec_output_sampling_wavelengths(
@@ -128,7 +138,6 @@ class ResampleSpecData(ResampleData):
             targ_ra, targ_dec
         )
         ref_lam = np.array(ref_lam)
-
         n_lam = ref_lam.size
         if not n_lam:
             raise ValueError("Not enough data to construct output WCS.")
@@ -205,10 +214,17 @@ class ResampleSpecData(ResampleData):
                                                  fill_value=np.nan)
         self.data_size = (ny, len(ref_lam))
 
-        # Construct the final transform
+        # Construct the final transform.
+        # First coordinate is set to 0 to represent the "horizontal" center
+        # of the slit (if we imagine slit to be vertical in the usual X-Y 2D
+        # cartesian frame):
         mapping = Mapping((0, 1, 0))
-        mapping.inverse = Mapping((2, 1))
-        out_det2slit = mapping | Identity(1) & y_slit_model & wavelength_transform
+        inv_mapping = Mapping((2, 1))
+        inv_mapping.inverse = mapping
+        mapping.inverse = inv_mapping
+        zero_model = Const1D(0)
+        zero_model.inverse = zero_model
+        det2slit = mapping | zero_model & y_slit_model & wavelength_transform
 
         # Create coordinate frames
         det = cf.Frame2D(name='detector', axes_order=(0, 1))
@@ -221,7 +237,7 @@ class ResampleSpecData(ResampleData):
                                 reference_frame=coord.ICRS())
         world = cf.CompositeFrame([sky, spec], name='world')
 
-        pipeline = [(det, out_det2slit), (slit_frame, s2w), (world, None)]
+        pipeline = [(det, det2slit), (slit_frame, s2w), (world, None)]
         output_wcs = WCS(pipeline)
 
         # Compute bounding box and output array shape.  Add one to the y (slit)
@@ -666,7 +682,7 @@ def _find_nirspec_output_sampling_wavelengths(wcs_list, targ_ra, targ_dec, mode=
     ra, dec, lambdas = refwcs(*grid)
 
     if mode == 'median':
-        ref_lam = np.nanmedian(lambdas[:, np.any(np.isfinite(lambdas), axis=0)], axis=0).tolist()
+        ref_lam = sorted(np.nanmedian(lambdas[:, np.any(np.isfinite(lambdas), axis=0)], axis=0))
     else:
         ref_lam, _, _ = _find_nirspec_sampling_wavelengths(
             refwcs,
@@ -678,13 +694,15 @@ def _find_nirspec_output_sampling_wavelengths(wcs_list, targ_ra, targ_dec, mode=
     lam1 = ref_lam[0]
     lam2 = ref_lam[-1]
 
+    min_delta = np.fabs(np.ediff1d(ref_lam).min())
+
     image_lam = []
     for w in wcs_list[1:]:
         bbox = w.bounding_box
         grid = wcstools.grid_from_bounding_box(bbox)
         ra, dec, lambdas = w(*grid)
         if mode == 'median':
-            lam = np.nanmedian(lambdas[:, np.any(np.isfinite(lambdas), axis=0)], axis=0).tolist()
+            lam = sorted(np.nanmedian(lambdas[:, np.any(np.isfinite(lambdas), axis=0)], axis=0))
         else:
             lam, _, _ = _find_nirspec_sampling_wavelengths(
                 w,
@@ -693,6 +711,7 @@ def _find_nirspec_output_sampling_wavelengths(wcs_list, targ_ra, targ_dec, mode=
                 fast=mode == 'fast'
             )
         image_lam.append((lam, np.min(lam), np.max(lam)))
+        min_delta = min(min_delta, np.fabs(np.ediff1d(ref_lam).min()))
 
     # The code below is optimized for the case when wavelength is an increasing
     # function of the pixel index along the X-axis. It will not work correctly
@@ -727,6 +746,14 @@ def _find_nirspec_output_sampling_wavelengths(wcs_list, targ_ra, targ_dec, mode=
                 idx = np.flatnonzero(lam_ar > lam2)
                 ref_lam = ref_lam + lam_ar[idx].tolist()
                 lam2 = ref_lam[-1]
+
+    # In the resampled WCS, if two wavelengths are closer to each other
+    # than 1/10 of the minimum difference between two wavelengths,
+    # remove one of the points.
+    ediff = np.fabs(np.ediff1d(ref_lam))
+    idx = np.flatnonzero(ediff < max(0.1 * min_delta, 1e2 * np.finfo(1.0).eps))
+    for i in idx[::-1]:
+        del ref_lam[i]
 
     return ref_lam
 

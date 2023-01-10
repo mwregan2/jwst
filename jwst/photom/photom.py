@@ -309,8 +309,12 @@ class DataSet():
                 # Compute relative sensitivity for each pixel based
                 # on its wavelength
                 sens2d = np.interp(wave2d, waves, relresps)
-                sens2d *= conv_factor  # include the scalar conversion factor
-                sens2d /= area2d  # divide by pixel area
+                sens2d *= tabdata['photmj']  # include the initial scalar conversion factor -> MJ
+                # This line used to be applied to all IFU data, but I think this was an error -
+                # masked by the fact that the initial pixel area maps for IFU data were
+                # arrays of 1-values (in arcsec**2). If srctype==POINT, do not apply.
+                if self.source_type.upper() != 'POINT':
+                    sens2d /= area2d * A2_TO_SR  # divide by pixel area * A2_TO_SR -> MJ/sr
                 # Reset NON_SCIENCE pixels to 1 in sens2d array and flag
                 # them in the science data DQ array
                 where_dq = np.bitwise_and(dqmap, dqflags.pixel['NON_SCIENCE'])
@@ -782,8 +786,9 @@ class DataSet():
 
                     # First, compute 2D array of photom correction values using
                     # uncorrected wavelengths, which is appropriate for a uniform source
+                    scalar_conv = conversion
                     conversion, no_cal = self.create_2d_conversion(self.input.slits[self.slitnum],
-                                                                   self.exptype, conversion,
+                                                                   self.exptype, scalar_conv,
                                                                    waves, relresps, order,
                                                                    use_wavecorr=False)
                     slit.photom_uniform = conversion  # store the result
@@ -792,7 +797,7 @@ class DataSet():
                     # which is appropriate for a point source. This is the version of
                     # the correction that will actually get applied to the data below.
                     conversion, no_cal = self.create_2d_conversion(self.input.slits[self.slitnum],
-                                                                   self.exptype, conversion,
+                                                                   self.exptype, scalar_conv,
                                                                    waves, relresps, order,
                                                                    use_wavecorr=True)
                     slit.photom_point = conversion  # store the result
@@ -1031,7 +1036,12 @@ class DataSet():
                     # Note that this only copied to the first slit.
                     self.input.slits[0].area = pix_area.data
                 else:
-                    self.input.area = pix_area.data
+                    ystart = self.input.meta.subarray.ystart - 1
+                    xstart = self.input.meta.subarray.xstart - 1
+                    yend = ystart + self.input.meta.subarray.ysize
+                    xend = xstart + self.input.meta.subarray.xsize
+                    self.input.area = pix_area.data[ystart: yend,
+                                                    xstart: xend]
                 log.info('Pixel area map copied to output.')
             else:
                 self.save_area_nirspec(pix_area)

@@ -13,6 +13,7 @@ GOOD = dqflags.pixel["GOOD"]
 DO_NOT_USE = dqflags.pixel["DO_NOT_USE"]
 JUMP_DET = dqflags.pixel["JUMP_DET"]
 SATURATED = dqflags.pixel["SATURATED"]
+NO_GAIN = dqflags.pixel["NO_GAIN_VALUE"]
 
 DELIM = "-" * 70
 
@@ -293,7 +294,9 @@ class TestMethods:
         assert 0 == np.min(data)
 
     def test_bad_gain_values(self, method):
-        # all pixel values are zero. So slope should be zero
+        # All pixel values are zero, so slope should be zero, except
+        # the pixels with invalid data.  Those pixels should have
+        # NaN values.
         model1, gdq, rnoise, pixdq, err, gain = setup_inputs(ngroups=5)
         model1.meta.exposure.ngroups = 11
         gain.data[10, 10] = -10
@@ -304,10 +307,16 @@ class TestMethods:
 
         data = slopes[0]
         dq = slopes[1]
-        assert 0 == np.max(data)
-        assert 0 == np.min(data)
-        assert dq[10, 10] == 524288 + 1
-        assert dq[20, 20] == 524288 + 1
+
+        no_nan = np.zeros(data.shape, dtype=int)
+        no_nan[data != 0] = 1
+        tsum = sum(sum(no_nan))
+
+        assert tsum == 2
+        assert np.isnan(data[10, 10])
+        assert np.isnan(data[20, 20])
+        assert dq[10, 10] == NO_GAIN | DO_NOT_USE
+        assert dq[20, 20] == NO_GAIN | DO_NOT_USE
 
     def test_simple_ramp(self, method):
         # Here given a 10 group ramp with an exact slope of 20/group. The output slope should be 20.
@@ -437,9 +446,10 @@ class TestMethods:
 
         # expect SATURATED
         dq = slopes[1]
-        assert dq[50, 51] == SATURATED
+        assert dq[50, 51] == GOOD
+
         # expect SATURATED and DO_NOT_USE, because 1st group is Saturated
-        assert dq[50, 52] == SATURATED + DO_NOT_USE
+        assert dq[50, 52] == SATURATED | DO_NOT_USE
 
     def test_four_groups_oneCR_orphangroupatend_fit(self, method):
         model1, gdq, rnoise, pixdq, err, gain = setup_inputs(ngroups=4, gain=1, readnoise=10)
@@ -818,7 +828,7 @@ def test_miri_no_good_pixel():
     assert image_info is None
 
 
-def test_zero_frame_usage():
+def test_zeroframe_usage():
     """
     Test using ZEROFRAME data for fully saturated ramps, with three different
     ramps.
@@ -882,7 +892,8 @@ def test_zero_frame_usage():
     check = np.array([[37.04942, 0.46572033, 4.6866207]])
     np.testing.assert_allclose(sdata, check, tol, tol)
 
-    check = np.array([[2, 2, 2]])
+    # Since the second integration is GOOD the final DQ is GOOD.
+    check = np.array([[GOOD, GOOD, GOOD]])
     np.testing.assert_allclose(sdq, check, tol, tol)
 
     check = np.array([[0.06958079, 0.0002169, 0.20677584]])
@@ -897,12 +908,14 @@ def test_zero_frame_usage():
     # Check slopes information
     cdata, cdq, cvp, cvr, cerr = cube
 
-    check = np.array([[[186.28912, 0., 93.14456]],
+    check = np.array([[[186.28912, np.nan, 93.14456]],
                       [[0.46572027, 0.46572033, 0.46572033]]])
     np.testing.assert_allclose(cdata, check, tol, tol)
 
-    check = np.array([[[2, 3, 2]],
-                      [[0, 0, 0]]])
+    # Column 2 in the first integration is marked GOOD because there
+    # is valid ZEROFRAME data that is used.
+    check = np.array([[[GOOD, SATURATED | DO_NOT_USE, GOOD]],
+                      [[GOOD, GOOD, GOOD]]])
     np.testing.assert_allclose(cdq, check, tol, tol)
 
     check = np.array([[[3.4790397e-01, 0.0000000e+00, 4.3422928e+00]],

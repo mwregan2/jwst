@@ -125,6 +125,22 @@ class JWSTSourceCatalog:
         self.model.meta.bunit_data = unit.name
         self.model.meta.bunit_err = unit.name
 
+    def convert_from_jy(self):
+        """
+        Convert the data and errors from Jy to MJy/sr and change from
+        `~astropy.unit.Quantity` objects to `~numpy.ndarray`.
+        """
+
+        to_mjy_sr = 1.e6 * self.model.meta.photometry.pixelarea_steradians
+        self.model.data /= to_mjy_sr
+        self.model.err /= to_mjy_sr
+
+        self.model.data = self.model.data.value  # remove units
+        self.model.err = self.model.err.value  # remove units
+
+        self.model.meta.bunit_data = 'MJy/sr'
+        self.model.meta.bunit_err = 'MJy/sr'
+
     @staticmethod
     def convert_flux_to_abmag(flux, flux_err):
         """
@@ -162,9 +178,9 @@ class JWSTSourceCatalog:
         """
         desc = {}
         desc['label'] = 'Unique source identification label number'
-        desc['xcentroid'] = 'X pixel value of the source centroid'
-        desc['ycentroid'] = 'Y pixel value of the source centroid'
-        desc['sky_centroid'] = 'Sky coordinate of the source centroid'
+        desc['xcentroid'] = 'X pixel value of the source centroid (0 indexed)'
+        desc['ycentroid'] = 'Y pixel value of the source centroid (0 indexed)'
+        desc['sky_centroid'] = 'ICRS Sky coordinate of the source centroid'
         desc['isophotal_flux'] = 'Isophotal flux'
         desc['isophotal_flux_err'] = 'Isophotal flux error'
         desc['isophotal_abmag'] = 'Isophotal AB magnitude'
@@ -947,5 +963,8 @@ class JWSTSourceCatalog:
         self.meta['aperture_params'] = self.aperture_params
         self.meta['abvega_offset'] = self.abvega_offset
         catalog.meta.update(self.meta)
+
+        # reset units on input model back to MJy/sr
+        self.convert_from_jy()
 
         return catalog

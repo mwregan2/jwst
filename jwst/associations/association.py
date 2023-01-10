@@ -5,6 +5,8 @@ import json
 import jsonschema
 import logging
 import re
+import os
+import warnings
 
 from . import __version__
 from .exceptions import (
@@ -199,6 +201,18 @@ class Association(MutableMapping):
         except (AttributeError, jsonschema.ValidationError) as err:
             logger.debug('Validation failed:\n%s', err)
             raise AssociationNotValidError('Validation failed') from err
+
+        # Validate no path data for expnames
+        for product in asn_data["products"]:
+            members = product['members']
+            for member in members:
+                fpath, fname = os.path.split(member["expname"])
+                if len(fpath) > 0:
+                    err_str = "'expname' contains path, but should only be a filename."
+                    err_str += "  All input files should be in a single directory"
+                    err_str += ", so no path is needed."
+                    logger.debug(err_str)
+                    warnings.warn(err_str, UserWarning)
         return True
 
     def dump(self, format='json', **kwargs):
@@ -382,6 +396,7 @@ class Association(MutableMapping):
 
         # Set the association type for all reprocessed items.
         for process_list in reprocess:
+            process_list.trigger_rules.update([type(self)])
             if process_list.rules is None:
                 process_list.rules = [type(self)]
 
