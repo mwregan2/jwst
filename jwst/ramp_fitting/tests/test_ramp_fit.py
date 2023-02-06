@@ -336,6 +336,20 @@ class TestMethods:
         data = slopes[0]
         np.testing.assert_allclose(data[50, 50], (20.0 / 3), 1e-6)
 
+    def test_fit_after_multiple_jumps(self, method):
+        model1, gdq, rnoise, pixdq, err, gain = setup_inputs(ngroups=10, readnoise=50)
+        model1.data[0, :, 50, 50] = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+        model1.data[0, :, 49, 50] = [10, 15, 20, 25, 130, 235, 240, 245, 250, 255]
+        model1.groupdq[0, 4:7, 49, 50] = JUMP_DET
+
+        slopes, cube, optional, gls_dummy = ramp_fit(
+            model1, 1024 * 30000., True, rnoise, gain, 'OLS', 'optimal', 'none', dqflags.pixel)
+
+        np.assert_allclose(slopes[0, 50, 50], 5.0)
+        p.assert_allclose(slopes[0, 49, 50], 5.0)
+
+
+
     def test_read_noise_only_fit(self, method):
         model1, gdq, rnoise, pixdq, err, gain = setup_inputs(ngroups=5, readnoise=50)
         model1.data[0, 0, 50, 50] = 10.0
