@@ -1,10 +1,16 @@
-1.9.5 (unreleased)
+1.9.6 (unreleased)
 ==================
 
 datamodels
 ----------
 
 - Move ``jwst.datamodels`` out of ``jwst`` into ``stdatamodels.jwst.datamodels``. [#7439]
+
+dq_init
+-------
+
+- Propagate ``DO_NOT_USE`` flags from MASK ref file to GROUPDQ array during
+  dq initialization [#7447]
 
 extract_1d
 ----------
@@ -100,6 +106,10 @@ tweakreg
   additional user-provided rotations and scale corrections to an imaging
   WCS of a calibrated image. [#7430]
 
+1.9.5 (2023-03-02)
+==================
+
+- add ``opencv-python`` to ``requirements-sdp.txt``
 
 1.9.4 (2023-01-27)
 ==================
