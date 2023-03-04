@@ -1661,8 +1661,8 @@ class MIRIDataset(Dataset):
                 # For now, just average the left and right corrections
                 oddrefsignal = 0.5 * (oddrefleft + oddrefright)
                 evenrefsignal = 0.5 * (evenrefleft + evenrefright)
-                oddrefsignal = oddrefright
-                evenrefsignal = evenrefright
+                oddrefsignal = oddrefleft
+                evenrefsignal = evenrefleft
                 oddslice = (slice(datarowstart, datarowstop, 2),
                             slice(datacolstart, datacolstop, 4))
                 evenslice = (slice(datarowstart + 1, datarowstop, 2),
