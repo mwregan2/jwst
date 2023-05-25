@@ -14,6 +14,9 @@ on:
     # Weekly Monday 9AM build
     - cron: "0 9 * * 1"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   crds:
@@ -61,18 +64,23 @@ jobs:
       cache-key: crds-${{ needs.crds.outputs.context }}
       envs: |
         - linux: test-oldestdeps-xdist-cov
-          python-version: 3.8
-        - linux: test-xdist
-          python-version: 3.8
+          python-version: 3.9
+          pytest-results-summary: true
         - linux: test-xdist
           python-version: 3.9
+          pytest-results-summary: true
         - linux: test-sdpdeps-xdist
           python-version: 3.9
+          pytest-results-summary: true
         - linux: test-xdist
           python-version: 3.10
+          pytest-results-summary: true
         - linux: test-xdist
           python-version: 3.11
+          pytest-results-summary: true
         - macos: test-xdist
           python-version: 3.11
+          pytest-results-summary: true
         - linux: test-xdist-cov
           coverage: codecov
+          pytest-results-summary: true
