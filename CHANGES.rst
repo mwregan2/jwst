@@ -32,12 +32,18 @@ datamodels
 - Removed use of deprecated ``stdatamodels.jwst.datamodels.DataModel`` class from
   all steps and replaced it with ``stdatamodels.jwst.datamodels.JwstDataModel``. [#7571]
 
+- Dynamically inspect ``stdatamodels.jwst.datamodels`` and expose it as
+  ``jwst.datamodels`` [#7605]
+
 documentation
 -------------
 
 - Fix bugs in implementation of ``pixel_replace`` documentation. [#7565]
 
 - Update tutorial usage of ``jump.threshold`` to ``jump.rejection_threshold``. [#7572]
+
+- Update ``calwebb_spec2`` docs to reflect the fact that the MIRI MRS ``straylight``
+  step now comes before the ``flatfield`` step. [#7593]
 
 extract_1d
 ----------
@@ -49,7 +55,7 @@ extract_1d
 flat_field
 ----------
 
-- Refactored NIRSpec 1D flat interpolation for improved performance. [#7550]
+- Added log messages for reporting flat reference file(s) used. [#7606]
 
 cube_build
 ----------
@@ -67,6 +73,8 @@ other
 - Drop support for Python 3.8 [#7552]
 
 - Override package dependencies with requirements file when requested [#7557]
+
+- Close files left open in test suite [#7599]
 
 pathloss
 --------
@@ -92,6 +100,18 @@ ramp_fitting
 - Updated CI tests due to a change in STCAL, which fixed a bug in the way the number
   of groups in a segment are computed when applying optimal weighting to line
   fit segments. [#7560, spacetelescope/stcal#163]
+
+refpix
+------
+
+- Assign reference pixel flag to first and last four columns for
+  NIRSpec subarrays that do not share an edge with full frame,
+  so that corrections can be computed from those unilluminated pixels. [#7598]
+
+regtest
+-------
+
+- Updated input filenames for NIRCam ``wfss_contam`` tests [#7595]
 
 srctype
 -------
@@ -215,6 +235,8 @@ documentation
   step. [#7510]
 
 - Clarify ``jump`` arguments documentation, and correct typos. [#7518]
+
+- Update description of ``undersampling`` step to improve readability. [#7589]
 
 dq_init
 -------
