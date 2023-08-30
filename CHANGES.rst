@@ -1,16 +1,94 @@
-1.11.4 (unreleased)
+1.11.5 (unreleased)
 ===================
+
+assign_wcs
+----------
+
+- Use isinstance instead of comparison with a type for lamp_mode inspection [#7801]
+
+- Save bounding box to imaging WCS matching the shape of the data, for datamodels
+  without a defined bounding box. [#7809]
+
+associations
+------------
+
+- Update the Level 3 product name construction for NIRCam coronagraphic data that
+  get processed through both coron3 and image3, to add the suffix "-image3" to the
+  product name for the data processed as imaging, in order to prevent duplicate
+  Level 3 file names from each pipeline. [#7826]
+
+- Update the Level 2 spectroscopic ASN rules to exclude any NIRSpec IFU exposures that
+  use filter/grating combinations known to produce no data on the NRS2 detector.
+  [#7833]
+
+- Remove order dependency on association diffing. [#7853]
+
+background
+----------
+
+- Allow background accumulation for combinations of full and subarray observations [#7827]
+
+calwebb_spec2
+-------------
+
+- Run ``pixel_replace`` before setting metadata and suffix of datamodel
+  that is returned by the pipeline to ensure a file is created with the
+  expected ``_cal`` suffix. [#7772]
+
+charge_migration
+----------------
+
+- Step was renamed from undersampling_migration. Changed default signal threshold,
+  added efficient routine to flag neighborhood pixels, added new unit test,
+  improved earlier unit tests, updated docs. [#7825]
+  
+cube_build
+----------
+
+- Replace scale1 and scale2 arguments with scalexy, add debug option debug_spaxel,
+  and add more details to docs. [#7783]
+
+- Correct slicer scale and orientation in output WCS for IFU cubes built in internal_cal
+  coordinates, for NIRSpec calibration analysis. [#7811]
+
+- Fix a bug with memory allocation in C extensions when weighting=emsm. [#7847]
 
 datamodels
 ----------
 
 - Remove ``jwst.datamodels.schema`` in favor of ``stdatamodels.schema`` [#7660]
 
+- updated ``stdatamodels`` pin to ``>=1.8.0`` [#7854]
+
+engdb_tools
+-----------
+
+- Check alternative host is alive before attempting to run test for
+  access to avoid waiting the full timeout during test runs [#7780]
+
+extract_2d
+----------
+
+- Updated unit test truth values after NIRCam WFSS transform updates [#7851]
+
 flat_field
 ----------
 
 - Modify the test_flatfield_step_interface unit test to prevent it from causing
-  other tests to fail [#7752]
+  other tests to fail. [#7752]
+
+general
+-------
+
+- Require minimum asdf version 2.14.4 [#7801]
+
+jump
+____
+
+- Updated documentation for the step parameters [#7778]
+
+- Added argument description for three_group_rejection_threshold and
+  four_group_rejection_threshold [#7839].
 
 master_background
 -----------------
@@ -18,6 +96,66 @@ master_background
 - Allow the user to write the 2D expanded version of the user-provided 1D background for each
   file in the assocation. [#7714]
 
+outlier_detection
+-----------------
+
+- Fix naming and logging of intermediate blot files written to disk for imaging modes. [#7784]
+
+pathloss
+--------
+
+- Fix interpolation error for point source corrections. [#7799]
+
+- Update the MIRI LRS fixed-slit correction to default to the center of the slit
+  when the computed target location is outside the slit. Add the parameter 
+  "user_slit_loc" to allow specifying the source location to use. [#7806]
+
+pixel_replace
+-------------
+
+- Add the minimum gradient method for the MIRI MRS. [#7823]
+
+refpix
+------
+
+- Modified algorithm of intermittent bad pixels factor to be the number
+  of sigmas away from mean for the corresponding array (either differences,
+  means, or standard deviations arrays). [#7745]
+
+resample
+--------
+
+- Use the same logic for computing input range for resample step from input
+  image shape and the bounding box both for ``SCI`` image as well as for the
+  ``ERR`` and ``VARIANCE_*`` images. [#7774]
+
+- Update the following exposure time keywords: XPOSURE (EFFEXPTM),
+  DURATION and TELAPSE. [#7793]
+
+residual_fringe
+---------------
+
+- Use scipy.interpolate.BSpline instead of astropy.modeling.Spline1D in
+  residual_fringe fitting utils [#7764]
+  
+undersampling_correction
+------------------------
+
+- Changed default signal threshold, added efficient routine to flag neighborhood
+  pixels, added new unit test, improved earlier unit tests, updated docs. [#7740]
+
+- Removed directories for undersampling_correction step, as the step has been
+  renamed charge_migration. [#7850]
+  
+
+1.11.4 (2023-08-14)
+===================
+
+set_telescope_pointing
+----------------------
+
+- Fixes to account for the fact that the commanded Guide Star position is always
+  relative to FGS1 even when guiding with FGS2. [#7804]
 
 1.11.3 (2023-07-17)
 ===================
