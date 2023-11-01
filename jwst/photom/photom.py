@@ -511,7 +511,7 @@ class DataSet():
                 # Old style ref file; skip the correction
                 log.info("Skipping MRS MIRI time correction. Extensions not found in the reference file.")
                 self.mrs_time_correction = False
-            
+
             #if np.any(ftab.timecoeff_ch1['binwave']) and self.mrs_time_correction:
             if self.mrs_time_correction:
                 log.info("Applying MRS IFU time dependent correction.")
@@ -979,7 +979,7 @@ class DataSet():
 
         # Interpolate the photometric response values onto the
         # 2D wavelength grid
-        conv_2d = np.interp(wl_array, waves, relresps, left=np.NaN, right=np.NaN)
+        conv_2d = np.interp(wl_array, waves, relresps, left=np.nan, right=np.nan)
 
         # Combine the scalar and 2D conversion factors
         conversion = conversion * conv_2d
@@ -1033,7 +1033,7 @@ class DataSet():
 
         # Interpolate the photometric response values onto the
         # 1D wavelength grid
-        conv_1d = np.interp(wl_array, waves, relresps, left=np.NaN, right=np.NaN)
+        conv_1d = np.interp(wl_array, waves, relresps, left=np.nan, right=np.nan)
 
         if flip_wl:
             # If wl_array was flipped, flip the conversion before returning it.
@@ -1094,15 +1094,11 @@ class DataSet():
         # Don't need to do this for NIRSpec, because pixel areas come from
         # the AREA ref file, which have already been copied using save_area_nirspec
         if self.instrument != 'NIRSPEC':
-            try:
-                area_ster = ftab.meta.photometry.pixelarea_steradians
-            except AttributeError:
-                area_ster = None
+            area_ster = ftab.meta.photometry.pixelarea_steradians
+            if area_ster is None:
                 log.warning('The PIXAR_SR keyword is missing from %s', ftab.meta.filename)
-            try:
-                area_a2 = ftab.meta.photometry.pixelarea_arcsecsq
-            except AttributeError:
-                area_a2 = None
+            area_a2 = ftab.meta.photometry.pixelarea_arcsecsq
+            if area_a2 is None:
                 log.warning('The PIXAR_A2 keyword is missing from %s', ftab.meta.filename)
 
             # Copy the pixel area values to the output
@@ -1155,7 +1151,7 @@ class DataSet():
                     slit.meta.photometry.pixelarea_arcsecsq = 1.
                     slit.meta.photometry.pixelarea_steradians = 1.
                 else:
-                    slit.meta.photometry.pixelarea_arcsecsq = float(pixarea[match])
+                    slit.meta.photometry.pixelarea_arcsecsq = float(pixarea[match].item())
                     slit.meta.photometry.pixelarea_steradians = \
                         slit.meta.photometry.pixelarea_arcsecsq * A2_TO_SR
             if n_failures > 0:

@@ -1,4 +1,146 @@
-1.11.5 (unreleased)
+1.12.6 (unreleased)
+===================
+
+general
+-------
+
+- Add lack of python 3.12 support to project metadata [#8042]
+
+- Increase asdf maximum version to 4 [#8018]
+
+resample
+--------
+
+- Recognize additional keys in ASDF files that provide ``output_wcs`` for the
+  resample step. [#7894]
+
+- Set output image size when ``output_wcs`` is provided based on the largest
+  coordinates in the bounding box of the ``output_wcs``. [#7894]
+
+- Completely re-designed computation of the pixel area keywords
+  ``PIXAR_SR`` and ``PIXAR_A2`` for the resampled image. This change also
+  results in modified values in the resampled images. New computations
+  significantly reduce photometric errors. [#7894]
+
+
+1.12.5 (2023-10-19)
+===================
+
+datamodels
+----------
+
+- Added support for user-supplied ``group_id`` either via
+ ``model.meta.group_id`` attribute or as a member of the ASN table. [#7997]
+
+refpix
+------
+
+- Revert a change introduced in #7745, erroneously setting 2 detector columns near
+  bad reference pixels to zero. [#8005]
+
+
+1.12.4 (2023-10-12)
+===================
+
+cube_build
+----------
+
+- Keep data models opened by cube build open until the step completes. [#7998]
+
+general
+-------
+
+- Fix numpy 2.0 deprecation warnings in cube_build, photom and wfs_combine. [#7999]
+
+- Pinned dependencies for several in-development packages below their next versions
+  to maintain compatibility. [#8003, #8006]
+
+
+1.12.3 (2023-10-03)
+===================
+
+documentation
+-------------
+
+- Updated the ``calwebb_spec2`` pipeline docs to indicate that the ``pixel_replace`` step is
+  applied to NIRSpec IFU data, and made minor wording updates to the ``pixel_replace`` step
+  docs.  [#7990]
+
+- Updated the ``FilterOffset`` reference file docs to indicate that this reference file
+  type is also used for NIRISS and increase clarity on how the offsets are applied. [#7991]
+
+
+1.12.2 (2023-10-02)
+===================
+
+assign_wcs
+----------
+
+- Increase margin at edges of NIRSpec MOS slits to reduce edge effects in resampling. [#7976]
+
+associations
+------------
+
+- Prevent group candidates from generating level 3 TSO associations. [#7982]
+
+charge_migration
+----------------
+
+- Added tests to see if the data array is changed after runnung the step and
+  set the default signal_threshold to 25000. [#7895]
+
+extract_1d
+----------
+
+- Move MIRI MRS residual fringe correction later in the code after normalization by
+  pixel area of each wavelength plane, and apply residual fringe correction to surface
+  brightness and background vectors as well as flux. [#7980]
+
+flat_field
+----------
+
+- Update the ``combine_fast_slow`` function for NIRSpec spectroscopic flats
+  to use 1D error values provided by F-flat reference files. [#7978]
+
+- For NIRSpec modes, set all DO_NOT_USE pixels to NaN after flat
+  correction. [#7979]
+
+set_telescope_pointing
+----------------------
+
+- Ensure that CRPIX1/2 are set to default values for Guiding modes that fail pointing determination [#7983]
+
+straylight
+----------
+
+- Adjust MIRI MRS straylight routine to ensure cross-artifact correction does not
+  get applied to pedestal dark signal. [#7980]
+
+
+1.12.1 (2023-09-26)
+===================
+
+extract_1d
+----------
+
+- For MIRS MRS IFU data allow the user to set the src_type and allow
+  the user to scale the extraction radius between 0.5 to 3.0 FWHM. [#7883]
+
+- Bug fix for #7883. The input model type is checked to see if the input is
+  a single model or a model container. [#7965]
+
+outlier_detection
+-----------------
+
+- Remove median file output from ``output_dir`` if ``save_intermediate_results``
+  is set to False. [#7961]
+
+set_telescope_pointing
+----------------------
+
+- Extend engineering coverage time for guiding modes. [#7966]
+
+1.12.0 (2023-09-18)
 ===================
 
 assign_wcs
@@ -8,6 +150,14 @@ assign_wcs
 
 - Save bounding box to imaging WCS matching the shape of the data, for datamodels
   without a defined bounding box. [#7809]
+
+- Update the assignment of "source_id" values for NIRSpec fixed-slit exposures, so
+  that the slit containing the primary target always has source_id=1 and secondary
+  slits use a two-digit source_id value that reflects both the primary target in
+  use and the secondary slit from which the data are extracted. [#7879]
+
+- Compute sky position of dithered slit center for MIRI LRS fixed slit data, and
+  store in dither metadata under ``dithered_ra`` and ``dithered_dec``. [#7796]
 
 associations
 ------------
@@ -23,6 +173,17 @@ associations
 
 - Remove order dependency on association diffing. [#7853]
 
+- Update the Level 3 association rules for NIRSpec fixed-slit so that observations
+  the put the primary target in both the S200A1 and S200A2 slits get the data from
+  those two slits combined into a single final product. [#7879]
+
+- Update the Level 3 product name construction for NIRSpec fixed-slit observations
+  so that both the "source_id" and "slit_name" are left as variables for the
+  "calwebb_spec3" to populate at execution time. This update required an update to
+  the handling of the "opt_elem" attribute, so that it now only contains filter
+  and pupil information, while slit information is contained in the separate
+  attribute "fxd_slit". [#7879]
+
 background
 ----------
 
@@ -35,13 +196,21 @@ calwebb_spec2
   that is returned by the pipeline to ensure a file is created with the
   expected ``_cal`` suffix. [#7772]
 
+calwebb_spec3
+-------------
+
+- Updated to create output product names for NIRSpec fixed-slit data based on
+  both the "source_id" and "slit_name" values for each set of slit data, so that
+  the product name properly reflects the slit from which the data were taken.
+  [#7879]
+
 charge_migration
 ----------------
 
 - Step was renamed from undersampling_migration. Changed default signal threshold,
   added efficient routine to flag neighborhood pixels, added new unit test,
   improved earlier unit tests, updated docs. [#7825]
-  
+
 cube_build
 ----------
 
@@ -53,6 +222,9 @@ cube_build
 
 - Fix a bug with memory allocation in C extensions when weighting=emsm. [#7847]
 
+- Add options to set ra,dec tangent projection center, position angle and size of cube
+  in tangent plane. [#7882]
+
 datamodels
 ----------
 
@@ -60,11 +232,23 @@ datamodels
 
 - updated ``stdatamodels`` pin to ``>=1.8.0`` [#7854]
 
+documentation
+-------------
+
+- Fixed a reference to the ``ramp_fitting` module in the user documentation. [#7898]
+
 engdb_tools
 -----------
 
 - Check alternative host is alive before attempting to run test for
   access to avoid waiting the full timeout during test runs [#7780]
+
+extract_1d
+----------
+
+- Use ``source_{x/y}pos`` metadata to center extraction region for NIRSpec
+  (non-IFU) data; use dithered pointing info for MIRI LRS fixed slit data. [#7796]
+
 
 extract_2d
 ----------
@@ -82,6 +266,12 @@ general
 
 - Require minimum asdf version 2.14.4 [#7801]
 
+- Require minimum asdf version 2.15.1 and numpy 1.22 [#7861]
+
+- fix various deprecated usages of Numpy 2.0 [#7856]
+
+- Add required jsonschema as a dependency [#7880]
+
 jump
 ____
 
@@ -89,6 +279,9 @@ ____
 
 - Added argument description for three_group_rejection_threshold and
   four_group_rejection_threshold [#7839].
+
+- Updated argument description and parameter definition to allow
+  integer number of cores to be passed to STCAL jump.py. [#7871]
 
 master_background
 -----------------
@@ -101,19 +294,42 @@ outlier_detection
 
 - Fix naming and logging of intermediate blot files written to disk for imaging modes. [#7784]
 
+- Files outlier_i2d and blot files will only show up and remain on disk if
+  save_intermediary_results=True. [#7845]
+
 pathloss
 --------
 
 - Fix interpolation error for point source corrections. [#7799]
 
 - Update the MIRI LRS fixed-slit correction to default to the center of the slit
-  when the computed target location is outside the slit. Add the parameter 
+  when the computed target location is outside the slit. Add the parameter
   "user_slit_loc" to allow specifying the source location to use. [#7806]
+
+photom
+------
+
+- Adapt MRS time dependent correction so that it can run successfully on
+  TSO mode data. [#7869]
+
+- Issue a warning when the PIXAR_SR or PIXAR_A2 keywords are not found in the
+  PHOTOM reference file. [#7905]
 
 pixel_replace
 -------------
 
 - Add the minimum gradient method for the MIRI MRS. [#7823]
+
+- Corrected ``fit_profile`` algorithm behavior when estimating
+  flux of pixels centered in spectral trace, fitting normalization
+  scale independent of flux. [#7886]
+
+ramp_fitting
+------------
+
+- Removed unnecessary ramp fitting testing that duplicated testing already done
+  in STCAL. [#7888]
+
 
 refpix
 ------
@@ -137,7 +353,21 @@ residual_fringe
 
 - Use scipy.interpolate.BSpline instead of astropy.modeling.Spline1D in
   residual_fringe fitting utils [#7764]
-  
+
+
+set_telescope_pointing
+----------------------
+
+- Update the WCS calculations for GUIDING modes to match the actual operation
+  of the different FGS guiding modes. Previously, the algorithm used was the
+  same for all modes. [#7889]
+
+source_catalog
+--------------
+
+- Issue a warning when the pixelarea meta value is not available for converting
+  to and from flux density and surface brightness. [#7905]
+
 undersampling_correction
 ------------------------
 
@@ -146,7 +376,7 @@ undersampling_correction
 
 - Removed directories for undersampling_correction step, as the step has been
   renamed charge_migration. [#7850]
-  
+
 
 1.11.4 (2023-08-14)
 ===================
