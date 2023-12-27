@@ -1,4 +1,36 @@
-1.12.6 (unreleased)
+1.13.3 (unreleased)
+===================
+
+ramp_fitting
+------------
+
+- Updated the argument description and parameter definition for `maximum_cores`
+  to accept integer values to be passed to STCAL ramp_fit.py. [#8123]
+
+1.13.2 (2023-12-21)
+===================
+
+emicorr
+-------
+
+- Fix another bug with subarray=Full. [#8151]
+- Speeding up the code and fixing case of subarray not in ref file. [#8152]
+
+1.13.1 (2023-12-19)
+===================
+
+emicorr
+-------
+
+- Fix emicorr crashing with readpatt values other than FASTR1 or SLOWR1. [#8147]
+- Fix bug for subarray=Full unable to find configuration. [#8148]
+
+other
+-----
+
+- Fix a typo in ``__version_commit__`` string. [#8145]
+
+1.13.0 (2023-12-15)
 ===================
 
 background

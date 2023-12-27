@@ -27,79 +27,87 @@ default_subarray_cases = {
     "SLITLESSPRISM": {
         "rowclocks": 28,
         "frameclocks": 15904,
-        "freqs":  {"FASTR1": ["Hz390", "Hz10"],
-                   "SLOWR1":  {"MIRIMAGE" : ["Hz390", "Hz10_slow_MIRIMAGE"],
+        "freqs":  {"FAST": ["Hz390", "Hz10"],
+                   "SLOW":  {"MIRIMAGE" : ["Hz390", "Hz10_slow_MIRIMAGE"],
                               "MIRIFULONG" : ["Hz390", "Hz10_slow_MIRIFULONG"],
                               "MIRIFUSHORT" : ["Hz390", "Hz10_slow_MIRIFUSHORT"]}}},
 
     "MASKLYOT": {
         "rowclocks": 90,
         "frameclocks": 32400,
-        "freqs":  {"FASTR1": ["Hz390", "Hz10"],
-                   "SLOWR1":  {"MIRIMAGE" : ["Hz390", "Hz10_slow_MIRIMAGE"],
+        "freqs":  {"FAST": ["Hz390", "Hz10"],
+                   "SLOW":  {"MIRIMAGE" : ["Hz390", "Hz10_slow_MIRIMAGE"],
                               "MIRIFULONG" : ["Hz390", "Hz10_slow_MIRIFULONG"],
                               "MIRIFUSHORT" : ["Hz390", "Hz10_slow_MIRIFUSHORT"]}}},
 
     "SUB64": {
         "rowclocks": 28,
         "frameclocks": 8512,
-        "freqs":  {"FASTR1": ["Hz390", "Hz10"],
-                   "SLOWR1":  {"MIRIMAGE" : ["Hz390", "Hz10_slow_MIRIMAGE"],
+        "freqs":  {"FAST": ["Hz390", "Hz10"],
+                   "SLOW":  {"MIRIMAGE" : ["Hz390", "Hz10_slow_MIRIMAGE"],
                               "MIRIFULONG" : ["Hz390", "Hz10_slow_MIRIFULONG"],
                               "MIRIFUSHORT" : ["Hz390", "Hz10_slow_MIRIFUSHORT"]}}},
 
     "SUB128": {
         "rowclocks": 44,
         "frameclocks": 11904,
-        "freqs":  {"FASTR1": ["Hz390_sub128", "Hz10"],
-                   "SLOWR1":  {"MIRIMAGE" : ["Hz390", "Hz10_slow_MIRIMAGE"],
+        "freqs":  {"FAST": ["Hz390_sub128", "Hz10"],
+                   "SLOW":  {"MIRIMAGE" : ["Hz390", "Hz10_slow_MIRIMAGE"],
                               "MIRIFULONG" : ["Hz390", "Hz10_slow_MIRIFULONG"],
                               "MIRIFUSHORT" : ["Hz390", "Hz10_slow_MIRIFUSHORT"]}}},
 
     "MASK1140": {
         "rowclocks": 82,
         "frameclocks": 23968,
-        "freqs":  {"FASTR1": ["Hz390", "Hz10"],
-                   "SLOWR1":  {"MIRIMAGE" : ["Hz390", "Hz10_slow_MIRIMAGE"],
+        "freqs":  {"FAST": ["Hz390", "Hz10"],
+                   "SLOW":  {"MIRIMAGE" : ["Hz390", "Hz10_slow_MIRIMAGE"],
                               "MIRIFULONG" : ["Hz390", "Hz10_slow_MIRIFULONG"],
                               "MIRIFUSHORT" : ["Hz390", "Hz10_slow_MIRIFUSHORT"]}}},
 
     "MASK1550": {
         "rowclocks": 82,
         "frameclocks": 23968,
-        "freqs":  {"FASTR1": ["Hz390", "Hz10"],
-                   "SLOWR1":  {"MIRIMAGE" : ["Hz390", "Hz10_slow_MIRIMAGE"],
+        "freqs":  {"FAST": ["Hz390", "Hz10"],
+                   "SLOW":  {"MIRIMAGE" : ["Hz390", "Hz10_slow_MIRIMAGE"],
+                              "MIRIFULONG" : ["Hz390", "Hz10_slow_MIRIFULONG"],
+                              "MIRIFUSHORT" : ["Hz390", "Hz10_slow_MIRIFUSHORT"]}}},
+
+    "MASK1065": {
+        "rowclocks": 82,
+        "frameclocks": 23968,
+        "freqs":  {"FAST": ["Hz390", "Hz10"],
+                   "SLOW":  {"MIRIMAGE" : ["Hz390", "Hz10_slow_MIRIMAGE"],
                               "MIRIFULONG" : ["Hz390", "Hz10_slow_MIRIFULONG"],
                               "MIRIFUSHORT" : ["Hz390", "Hz10_slow_MIRIFUSHORT"]}}},
 
     # 390Hz already in-phase for these, but may need corr for other
     # frequencies (e.g. 10Hz heater noise)
 
-    "FULL_FASTR1": {
+    "FULL_FAST": {
         "rowclocks": 271,
         "frameclocks": 277504,
-        "freqs": {"FASTR1" : ["Hz10"]}},
+        "freqs": {"FAST" : ["Hz10"]}},
 
-    "FULL_SLOWR1": {
+    "FULL_SLOW": {
         "rowclocks": 2333,
         "frameclocks": 2388992,
-        "freqs": {"SLOWR1":  {"MIRIMAGE" : ["Hz10_slow_MIRIMAGE"],
+        "freqs": {"SLOW":  {"MIRIMAGE" : ["Hz10_slow_MIRIMAGE"],
                               "MIRIFULONG" : ["Hz10_slow_MIRIFULONG"],
                               "MIRIFUSHORT" : ["Hz10_slow_MIRIFUSHORT"]}}},
 
     "BRIGHTSKY": {
         "rowclocks": 162,
         "frameclocks": 86528,
-        "freqs": {"FASTR1" : ["Hz10"],
-                  "SLOWR1": {"MIRIMAGE" : ["Hz10_slow_MIRIMAGE"],
+        "freqs": {"FAST" : ["Hz10"],
+                  "SLOW": {"MIRIMAGE" : ["Hz10_slow_MIRIMAGE"],
                             "MIRIFULONG" : ["Hz10_slow_MIRIFULONG"],
                             "MIRIFUSHORT" : ["Hz10_slow_MIRIFUSHORT"]}}},
 
     "SUB256": {
         "rowclocks": 96,
         "frameclocks": 29952,
-        "freqs": {"FASTR1" : ["Hz10"],
-                  "SLOWR1": {"MIRIMAGE" : ["Hz10_slow_MIRIMAGE"],
+        "freqs": {"FAST" : ["Hz10"],
+                  "SLOW": {"MIRIMAGE" : ["Hz10_slow_MIRIMAGE"],
                             "MIRIFULONG" : ["Hz10_slow_MIRIFULONG"],
                             "MIRIFUSHORT" : ["Hz10_slow_MIRIFUSHORT"]}}},
 }
@@ -143,7 +151,7 @@ def do_correction(input_model, emicorr_model, save_onthefly_reffile, **pars):
                         save_intermediate_results=save_intermediate_results,
                         user_supplied_reffile=user_supplied_reffile,
                         nints_to_phase=nints_to_phase,
-                        nbins=nbins,
+                        nbins_all=nbins,
                         scale_reference=scale_reference
                         )
 
@@ -152,7 +160,7 @@ def do_correction(input_model, emicorr_model, save_onthefly_reffile, **pars):
 
 def apply_emicorr(input_model, emicorr_model, save_onthefly_reffile,
         save_intermediate_results=False, user_supplied_reffile=None,
-        nints_to_phase=None, nbins=None, scale_reference=True):
+        nints_to_phase=None, nbins_all=None, scale_reference=True):
     """
     -> NOTE: This is translated from IDL code fix_miri_emi.pro
 
@@ -199,8 +207,9 @@ def apply_emicorr(input_model, emicorr_model, save_onthefly_reffile,
     nints_to_phase : int
         Number of integrations to phase
 
-    nbins : int
-        Number of bins in one phased wave
+    nbins_all : int
+        Number of bins in one phased wave (this number will be used for all
+        frequencies to be corrected)
 
     scale_reference : bool
         If True, the reference wavelength will be scaled to the data's phase amplitude
@@ -223,19 +232,22 @@ def apply_emicorr(input_model, emicorr_model, save_onthefly_reffile,
         log.info('Using reference file to get subarray case.')
         subname, rowclocks, frameclocks, freqs2correct = get_subarcase(emicorr_model, subarray, readpatt, detector)
         reference_wave_list = []
-        for fnme in freqs2correct:
-            freq, ref_wave = get_frequency_info(emicorr_model, fnme)
-            freqs_numbers.append(freq)
-            reference_wave_list.append(ref_wave)
+        if freqs2correct is not None:
+            for fnme in freqs2correct:
+                freq, ref_wave = get_frequency_info(emicorr_model, fnme)
+                freqs_numbers.append(freq)
+                reference_wave_list.append(ref_wave)
     else:
         log.info('Using default subarray case corrections.')
         subname, rowclocks, frameclocks, freqs2correct = get_subarcase(default_subarray_cases, subarray, readpatt, detector)
-        for fnme in freqs2correct:
-            freq = get_frequency_info(default_emi_freqs, fnme)
-            freqs_numbers.append(freq)
+        if freqs2correct is not None:
+            for fnme in freqs2correct:
+                freq = get_frequency_info(default_emi_freqs, fnme)
+                freqs_numbers.append(freq)
 
-    if rowclocks is None:
-        # no subarray match found, print to log and skip correction
+    log.info('With configuration: Subarray={}, Read_pattern={}, Detector={}'.format(subarray, readpatt, detector))
+    if rowclocks is None or len(freqs_numbers) == 0:
+        # no subarray or read pattern match found, print to log and skip correction
         return subname
 
     # get the number of samples, 10us sample times per pixel (1 for fastmode, 9 for slowmode)
@@ -243,13 +255,17 @@ def apply_emicorr(input_model, emicorr_model, save_onthefly_reffile,
 
     # Initialize the output model as a copy of the input
     output_model = input_model.copy()
+    nints, ngroups, ny, nx = np.shape(output_model.data)
+    if nints_to_phase is None:
+        nints_to_phase = nints
+    elif nints_to_phase > nints:
+        nints_to_phase = nints
 
     # create the dictionary to store the frequencies and corresponding phase amplitudes
     if save_intermediate_results and save_onthefly_reffile is not None:
         freq_pa_dict = {'frequencies': {}, 'subarray_cases': {}}
 
     # Loop over the frequencies to correct
-    log.info('With configuration: Subarray={}, Read_pattern={}, Detector={}'.format(subarray, readpatt, detector))
     log.info('Will correct data for the following {} frequencies: '.format(len(freqs2correct)))
     log.info('   {}'.format(freqs2correct))
     for fi, frequency_name in enumerate(freqs2correct):
@@ -259,9 +275,6 @@ def apply_emicorr(input_model, emicorr_model, save_onthefly_reffile,
         # Read image data and set up some variables
         orig_data = output_model.data
         data = orig_data.copy()
-        nints, ngroups, ny, nx = np.shape(data)
-        if nints_to_phase is None:
-            nints_to_phase = nints
 
         # Correspondance of array order in IDL
         # sz[0] = 4 in idl
@@ -272,7 +285,35 @@ def apply_emicorr(input_model, emicorr_model, save_onthefly_reffile,
         nx4 = int(nx/4)
 
         dd_all = np.ones((nints, ngroups, ny, nx4))
-        log.info('Subtracting self-superbias from each group of each integration')
+        log.info('Subtracting self-superbias from each group of each integration and')
+
+        # Calculate times of all pixels in the input integration, then use that to calculate
+        # phase of all pixels. Times here is in integer numbers of 10us pixels starting from
+        # the first data pixel in the input image. Times can be a very large integer, so use
+        # a big datatype. Phaseall (below) is just 0-1.0.
+
+        # A safer option is to calculate times_per_integration and calculate the phase at each
+        # int separately. That way times array will have a smaller number of elements at each
+        # int, with less risk of datatype overflow. Still, use the largest datatype available
+        # for the time_this_int array.
+
+        times_this_int = np.zeros((ngroups, ny, nx4), dtype='ulonglong')
+        phaseall = np.zeros((nints, ngroups, ny, nx4))
+
+        # non-roi rowclocks between subarray frames (this will be 0 for fullframe)
+        extra_rowclocks = (1024. - ny) * (4 + 3.)
+        # e.g. ((1./390.625) / 10e-6) = 256.0 pix and ((1./218.52055) / 10e-6) = 457.62287 pix
+        period_in_pixels = (1./frequency) / 10.0e-6
+
+        start_time, ref_pix_sample = 0, 3
+
+        # Need colstop for phase calculation in case of last refpixel in a row. Technically,
+        # this number comes from the subarray definition (see subarray_cases dict above), but
+        # calculate it from the input image header here just in case the subarray definitions
+        # are not available to this routine.
+        colstop = int( xsize/4 + xstart - 1 )
+        log.info('doing phase calculation per integration')
+
         for ninti in range(nints_to_phase):
             log.debug('  Working on integration: {}'.format(ninti+1))
 
@@ -307,34 +348,6 @@ def apply_emicorr(input_model, emicorr_model, save_onthefly_reffile,
                 # This is the quad-averaged, cleaned, input image data for the exposure
                 dd_all[ninti, ngroupi, ...] = dd - np.median(dd)
 
-        # Calculate times of all pixels in the input integration, then use that to calculate
-        # phase of all pixels. Times here is in integer numbers of 10us pixels starting from
-        # the first data pixel in the input image. Times can be a very large integer, so use
-        # a big datatype. Phaseall (below) is just 0-1.0.
-
-        # A safer option is to calculate times_per_integration and calculate the phase at each
-        # int separately. That way times array will have a smaller number of elements at each
-        # int, with less risk of datatype overflow. Still, use the largest datatype available
-        # for the time_this_int array.
-
-        times_this_int = np.zeros((ngroups, ny, nx4), dtype='ulonglong')
-        phaseall = np.zeros((nints, ngroups, ny, nx4))
-
-        # non-roi rowclocks between subarray frames (this will be 0 for fullframe)
-        extra_rowclocks = (1024. - ny) * (4 + 3.)
-        # e.g. ((1./390.625) / 10e-6) = 256.0 pix and ((1./218.52055) / 10e-6) = 457.62287 pix
-        period_in_pixels = (1./frequency) / 10.0e-6
-
-        start_time, ref_pix_sample = 0, 3
-
-        # Need colstop for phase calculation in case of last refpixel in a row. Technically,
-        # this number comes from the subarray definition (see subarray_cases dict above), but
-        # calculate it from the input image header here just in case the subarray definitions
-        # are not available to this routine.
-        colstop = int( xsize/4 + xstart - 1 )
-        log.info('Phase calculation per integration')
-        for l in range(nints_to_phase):
-            log.debug('  Working on integration: {}'.format(l+1))
             for k in range(ngroups):   # frames
                 for j in range(ny):    # rows
                     # nsamples= 1 for fast, 9 for slow (from metadata)
@@ -363,7 +376,7 @@ def apply_emicorr(input_model, emicorr_model, save_onthefly_reffile,
             # number of 10us from the first data pixel in this integration, so to
             # convert to phase, divide by the waveform *period* in float pixels
             phase_this_int = times_this_int / period_in_pixels
-            phaseall[l, ...] = phase_this_int - phase_this_int.astype('ulonglong')
+            phaseall[ninti, ...] = phase_this_int - phase_this_int.astype('ulonglong')
 
             # add a frame time to account for the extra frame reset between MIRI integrations
             start_time += frameclocks
@@ -378,9 +391,13 @@ def apply_emicorr(input_model, emicorr_model, save_onthefly_reffile,
         # streched to a different dimension later. By default, use period_in_pixels/2.0
 
         # number of bins in one phased wave (e.g. 255, 218, etc)
-        if nbins is None:
+        if nbins_all is None:
             # the IDL code sets nbins as ulong type (ulonglong in python)
             nbins = int(period_in_pixels/2.0)
+        else:
+            nbins = nbins_all
+        if nbins > 501:
+            nbins = 500
 
         # bin the whole set
         log.info('Calculating the phase amplitude for {} bins'.format(nbins))
@@ -429,8 +446,8 @@ def apply_emicorr(input_model, emicorr_model, save_onthefly_reffile,
             # and optionally amplitude scaled)
             # shift and resample reference_wave at pa's phase
             # u[0] is the phase shift of reference_wave *to* pa
-            u = np.where(cc >= max(cc))
-            lut_reference = rebin(np.roll(reference_wave, u[0]), [period_in_pixels])
+            u = np.argmax(cc)
+            lut_reference = rebin(np.roll(reference_wave, u), [period_in_pixels])
 
             # Scale reference wave amplitude to match the pa amplitude from this dataset by
             # fitting a line rather than taking a mean ratio so that any DC offset drops out
@@ -463,7 +480,7 @@ def apply_emicorr(input_model, emicorr_model, save_onthefly_reffile,
         output_model.data = corr_data
 
     if save_intermediate_results and save_onthefly_reffile is not None:
-        if readpatt == 'FASTR1':
+        if readpatt == 'FAST':
             freqs_dict = {readpatt: freqs2correct}
         else:
             freqs_dict = {readpatt: {detector: freqs2correct} }
@@ -547,23 +564,17 @@ def minmed(data, minval=False, avgval=False, maxval=False):
     ngroups, ny, nx = np.shape(data)
     medimg = np.zeros((ny, nx))
     # use a mask to ignore nans for calculations
-    masked_data = np.ma.array(data, mask=np.isnan(data))
-
-    for i in range(nx):
-        for j in range(ny):
-            vec = masked_data[:, j, i]
-            u = np.where(vec != 0)
-            n = vec[u].size
-            if n > 0:
-                if n <= 2 or minval:
-                    medimg[j, i] = np.ma.min(vec[u])
-                if maxval:
-                    medimg[j, i] = np.ma.max(vec[u])
-                if not minval and not maxval and not avgval:
-                    medimg[j, i] = np.ma.median(vec[u])
-                if avgval:
-                    dmean , _, _, _ = iter_stat_sig_clip(vec[u])
-                    medimg[j, i] = dmean
+    vec = np.ma.array(data, mask=np.isnan(data))
+    n = vec.size
+    if n > 0:
+        if n <= 2 or minval:
+            medimg = np.ma.min(vec, axis=0)
+        if maxval:
+            medimg = np.ma.max(vec, axis=0)
+        if not minval and not maxval and not avgval:
+            medimg = np.ma.median(vec, axis=0)
+        if avgval:
+            medimg = np.ma.mean(vec, axis=0)
     return medimg
 
 
@@ -600,18 +611,29 @@ def get_subarcase(subarray_cases, subarray, readpatt, detector):
         List of frequency names to use
     """
     subname, rowclocks, frameclocks, frequencies = None, None, None, None
+
+    # make sure the readpattern is defined as expected
+    readpatt = readpatt.upper()
+    if "SLOW" in readpatt:
+        readpatt = "SLOW"
+    elif "FAST" in readpatt:
+        readpatt = "FAST"
+    else:
+        return subname, rowclocks, frameclocks, frequencies
+
+    # search and return the specific values for the configuration
     if isinstance(subarray_cases, dict):
         for subname in subarray_cases:
-            if subarray not in subname:
+            if subarray == 'FULL':
+                subarray = subarray + '_' + readpatt
+            if subarray != subname:
                 continue
-            if subname == 'FULL':
-                subname = subname + '_' + readpatt
             rowclocks = subarray_cases[subname]["rowclocks"]
             frameclocks = subarray_cases[subname]["frameclocks"]
-            if readpatt == "SLOWR1":
-                frequencies = subarray_cases[subname]["freqs"]["SLOWR1"][detector]
+            if readpatt == "SLOW":
+                frequencies = subarray_cases[subname]["freqs"]["SLOW"][detector]
             else:
-                frequencies = subarray_cases[subname]["freqs"]["FASTR1"]
+                frequencies = subarray_cases[subname]["freqs"]["FAST"]
             break
     else:
         frequencies = []
@@ -621,18 +643,18 @@ def get_subarcase(subarray_cases, subarray, readpatt, detector):
             if subarray not in subname:
                 continue
             log.debug('Found subarray case {}!'.format(subname))
-            if 'FULL' in subname:
-                subname = subname + '_' + readpatt
             for item, val in mdl_dict.items():
                 if subname in item:
+                    if 'FULL' in item and readpatt not in item:
+                        continue
                     if "rowclocks" in item:
                         rowclocks = val
                     elif "frameclocks" in item:
                         frameclocks = val
                     else:
-                        if readpatt == "SLOWR1" and "SLOWR1" in item and detector in item:
+                        if readpatt == "SLOW" and "SLOW" in item and detector in item:
                             frequencies.append(val)
-                        elif readpatt == "FASTR1" and "FASTR1" in item:
+                        elif readpatt == "FAST"  and "FAST" in item:
                             frequencies.append(val)
             if subname is not None and rowclocks is not None and frameclocks is not None and frequencies is not None:
                 break
@@ -716,9 +738,8 @@ def iter_stat_sig_clip(data, sigrej=3.0, maxiter=10):
     # Compute the mean + standard deviation of the entire data array,
     # these values will be returned if there are fewer than 2 good points.
     dmask = np.ones(ngood, dtype='b') + 1
-    dmean = sum(data * dmask) / ngood
+    dmean = np.sum(data * dmask) / ngood
     dsigma = np.sqrt(sum((data - dmean)**2) / (ngood - 1))
-    dsigma = dsigma
     iiter = 1
 
     # Iteratively compute the mean + stdev, updating the sigma-rejection thresholds
@@ -734,7 +755,7 @@ def iter_stat_sig_clip(data, sigrej=3.0, maxiter=10):
         ngood = sum(dmask)
 
         if ngood >= 2:
-            dmean = sum(data*dmask) / ngood
+            dmean = np.sum(data*dmask) / ngood
             dsigma = np.sqrt( sum((data - dmean)**2 * dmask) / (ngood - 1) )
             dsigma = dsigma
 
