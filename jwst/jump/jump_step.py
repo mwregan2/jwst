@@ -68,7 +68,7 @@ class JumpStep(Step):
                 result.meta.cal_step.jump = 'SKIPPED'
                 return result
 
-            # Retrieve the parameter value
+            # Retrieve the parameter values
             rej_thresh = self.rejection_threshold
             three_grp_rej_thresh = self.three_group_rejection_threshold
             four_grp_rej_thresh = self.four_group_rejection_threshold
