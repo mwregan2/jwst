@@ -45,7 +45,11 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
     after_jump_flag_n1 = int(after_jump_flag_time1 // gtime)
     after_jump_flag_n2 = int(after_jump_flag_time2 // gtime)
     grps_masked_after_shower = int(time_masked_after_shower // gtime)
-
+    print("gtime", gtime)
+    print("after jump flag n1", after_jump_flag_n1)
+    print("after jump flag n2", after_jump_flag_n2)
+    print("after jump flag time1", after_jump_flag_time1)
+    print("after jump flag time2", after_jump_flag_time2)
     # Get 2D gain and read noise values from their respective models
     if reffile_utils.ref_matches_sci(input_model, gain_model):
         gain_2d = gain_model.data
