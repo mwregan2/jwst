@@ -222,6 +222,12 @@ def nircam_rate():
 
 def test_nirspec_wcs_roundtrip(nirspec_rate):
     im = AssignWcsStep.call(nirspec_rate)
+
+    # Since the ra_targ, and dec_targ are flux-weighted, we need non-zero
+    # flux values.  Add random values.
+    rng = np.random.default_rng(1234)
+    im.data += rng.random(im.data.shape)
+
     im = Extract2dStep.call(im)
     for slit in im.slits:
         _set_photom_kwd(slit)
@@ -470,9 +476,10 @@ def test_resample_undefined_variance(nircam_rate, shape):
     im.var_poisson = np.ones(shape, dtype=im.var_poisson.dtype.type)
     im.var_flat = np.ones(shape, dtype=im.var_flat.dtype.type)
     im.meta.filename = "foo.fits"
-
     c = ModelContainer([im])
-    ResampleStep.call(c, blendheaders=False)
+
+    with pytest.warns(RuntimeWarning, match="var_rnoise array not available"):
+        ResampleStep.call(c, blendheaders=False)
 
 
 @pytest.mark.parametrize('ratio', [0.7, 1.2])
