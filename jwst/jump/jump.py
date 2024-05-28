@@ -39,6 +39,8 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
     gdq = input_model.groupdq
     pdq = input_model.pixeldq
     err = input_model.err
+    exp_start = input_model.meta.exposure.start
+    exp_end = input_model.meta.exposure.end
     output_model = input_model.copy()
 
     # determine the number of groups that correspond to the after_jump times
@@ -73,6 +75,8 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
                                     after_jump_flag_n1,
                                     after_jump_flag_dn2,
                                     after_jump_flag_n2,
+                                    exp_start,
+                                    exp_end,
                                     min_sat_area=min_sat_area, min_jump_area=min_jump_area,
                                     expand_factor=expand_factor, use_ellipses=use_ellipses,
                                     min_sat_radius_extend=min_sat_radius_extend,
