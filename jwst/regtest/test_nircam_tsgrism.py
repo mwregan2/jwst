@@ -7,7 +7,7 @@ from jwst.stpipe import Step
 
 
 @pytest.fixture(scope="module")
-def run_pipelines(jail, rtdata_module):
+def run_pipelines(rtdata_module):
     """Run stage 2-3 tso pipelines on NIRCAM TSO grism data."""
     rtdata = rtdata_module
 
@@ -27,6 +27,35 @@ def run_pipelines(jail, rtdata_module):
     Step.from_cmdline(args)
 
     return rtdata
+
+
+@pytest.fixture(scope="module", 
+                params=["jw01185015001_03104_00001-seg004_nrcalong_rate.fits",
+                        "jw01185013001_04103_00001-seg003_nrcalong_rate.fits"])
+def run_pipeline_offsetSR(request, rtdata_module):
+    ''''''
+    rtdata = rtdata_module
+    rtdata.get_data("nircam/tsgrism/" + request.param)
+    args = ["calwebb_spec2", rtdata.input,
+            "--steps.extract_1d.save_results=True",]
+    Step.from_cmdline(args)
+    return rtdata
+
+
+@pytest.mark.bigdata
+def test_nircam_tsgrism_stage2_offsetSR(run_pipeline_offsetSR, fitsdiff_default_kwargs):
+    '''
+    Test coverage for offset special requirement specifying nonzero offset in X.
+    Test data are two observations of Gliese 436, one with offset specified and one without.
+    Quantitatively we just ensure that the outputs are identical to the inputs, but qualitatively
+    can check that the spectral lines fall at the same wavelengths in both cases,
+    which is why the zero-offset case is also included here.'''
+    rtdata = run_pipeline_offsetSR
+    rtdata.output = rtdata.input.replace("rate", "x1d")
+    rtdata.get_truth("truth/test_nircam_tsgrism_stages/" + rtdata.output.split('/')[-1])
+
+    diff = FITSDiff(rtdata.output, rtdata.truth, **fitsdiff_default_kwargs)
+    assert diff.identical, diff.report()
 
 
 @pytest.mark.bigdata
@@ -71,7 +100,7 @@ def test_nircam_tsgrism_stage3_whtlt(run_pipelines):
 
 
 @pytest.mark.bigdata
-def test_nircam_setpointing_tsgrism(_jail, rtdata, fitsdiff_default_kwargs):
+def test_nircam_setpointing_tsgrism(rtdata, fitsdiff_default_kwargs):
     """
     Regression test of the set_telescope_pointing script on a level-1b NIRCam file.
     """

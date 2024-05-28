@@ -1,17 +1,20 @@
 import logging
+import os
+import warnings
 
 import numpy as np
 from drizzle import util
 from drizzle import cdrizzle
+import psutil
 from spherical_geometry.polygon import SphericalPolygon
 
 from stdatamodels.jwst import datamodels
+from stdatamodels.jwst.library.basic_utils import bytes2human
 
 from jwst.datamodels import ModelContainer
 
 from . import gwcs_drizzle
 from . import resample_utils
-from ..lib.basic_utils import bytes2human
 from ..model_blender import blendmeta
 
 log = logging.getLogger(__name__)
@@ -67,7 +70,12 @@ class ResampleData:
                 all products in memory.
         """
         self.input_models = input_models
+        self.output_dir = None
         self.output_filename = output
+        if output is not None and '.fits' not in str(output):
+            self.output_dir = output
+            self.output_filename = None
+
         self.pscale_ratio = pscale_ratio
         self.single = single
         self.blendheaders = blendheaders
@@ -90,6 +98,8 @@ class ResampleData:
         crpix = kwargs.get('crpix', None)
         crval = kwargs.get('crval', None)
         rotation = kwargs.get('rotation', None)
+
+        self.asn_id = kwargs.get('asn_id', None)
 
         if pscale is not None:
             log.info(f'Output pixel scale: {pscale} arcsec.')
@@ -141,9 +151,27 @@ class ResampleData:
         self.pscale = pscale  # in deg
 
         log.debug('Output mosaic size: {}'.format(self.output_wcs.array_shape))
-        can_allocate, required_memory = datamodels.util.check_memory_allocation(
-            self.output_wcs.array_shape, kwargs['allowed_memory'], datamodels.ImageModel
-        )
+
+        allowed_memory = kwargs['allowed_memory']
+        if allowed_memory is None:
+            allowed_memory = os.environ.get('DMODEL_ALLOWED_MEMORY', allowed_memory)
+        if allowed_memory:
+            allowed_memory = float(allowed_memory)
+            # make a small image model to get the dtype
+            dtype = datamodels.ImageModel((1, 1)).data.dtype
+
+            # get the available memory
+            available_memory = psutil.virtual_memory().available + psutil.swap_memory().total
+
+            # compute the output array size
+            required_memory = np.prod(self.output_wcs.array_shape) * dtype.itemsize
+
+            # compare used to available
+            used_fraction = required_memory / available_memory
+            can_allocate = used_fraction <= allowed_memory
+        else:
+            can_allocate = True
+
         if not can_allocate:
             raise OutputTooLargeError(
                 f'Combined ImageModel size {self.output_wcs.array_shape} '
@@ -205,7 +233,10 @@ class ResampleData:
             output_type = exposure[0].meta.filename[indx:]
             output_root = '_'.join(exposure[0].meta.filename.replace(
                 output_type, '').split('_')[:-1])
-            output_model.meta.filename = f'{output_root}_outlier_i2d{output_type}'
+            if self.asn_id is not None:
+                output_model.meta.filename = f'{output_root}_{self.asn_id}_outlier_i2d{output_type}'
+            else:
+                output_model.meta.filename = f'{output_root}_outlier_i2d{output_type}'
 
             # Initialize the output with the wcs
             driz = gwcs_drizzle.GWCSDrizzle(output_model, pixfrac=self.pixfrac,
@@ -270,6 +301,8 @@ class ResampleData:
             if not self.in_memory:
                 # Write out model to disk, then return filename
                 output_name = output_model.meta.filename
+                if self.output_dir is not None:
+                    output_name = os.path.join(self.output_dir, output_name)
                 output_model.save(output_name)
                 log.info(f"Saved model in {output_name}")
                 self.output_models.append(output_name)
@@ -348,20 +381,19 @@ class ResampleData:
             )
             del data, inwht
 
-        # Resample variances array in self.input_models to output_model
-        self.resample_variance_array("var_rnoise", output_model)
-        self.resample_variance_array("var_poisson", output_model)
-        self.resample_variance_array("var_flat", output_model)
-        output_model.err = np.sqrt(
-            np.nansum(
-                [
-                    output_model.var_rnoise,
-                    output_model.var_poisson,
-                    output_model.var_flat
-                ],
-                axis=0
-            )
-        )
+        # Resample variance arrays in self.input_models to output_model
+        self.resample_variance_arrays(output_model)
+        var_components = [
+            output_model.var_rnoise,
+            output_model.var_poisson,
+            output_model.var_flat
+        ]
+        output_model.err = np.sqrt(np.nansum(var_components,axis=0))
+
+        # nansum returns zero for input that is all NaN -
+        # set those values to NaN instead
+        all_nan = np.all(np.isnan(var_components), axis=0)
+        output_model.err[all_nan] = np.nan
 
         self.update_exposure_times(output_model)
         self.output_models.append(output_model)
@@ -371,102 +403,185 @@ class ResampleData:
 
         return self.output_models
 
-    def resample_variance_array(self, name, output_model):
-        """Resample variance arrays from self.input_models to the output_model
+    def resample_variance_arrays(self, output_model):
+        """Resample variance arrays from self.input_models to the output_model.
 
-        Resample the ``name`` variance array to the same name in output_model,
-        using a cumulative sum.
+        Variance images from each input model are resampled individually and
+        added to a weighted sum. If weight_type is 'ivm', the inverse of the
+        resampled read noise variance is used as the weight for all the variance
+        components. If weight_type is 'exptime', the exposure time is used.
 
-        This modifies output_model in-place.
+        The output_model is modified in place.
         """
-        output_wcs = output_model.meta.wcs
-        inverse_variance_sum = np.full_like(output_model.data, np.nan)
-
-        log.info(f"Resampling {name}")
+        log.info("Resampling variance components")
+        weighted_rn_var = np.full_like(output_model.data, np.nan)
+        weighted_pn_var = np.full_like(output_model.data, np.nan)
+        weighted_flat_var = np.full_like(output_model.data, np.nan)
+        total_weight_rn_var = np.zeros_like(output_model.data)
+        total_weight_pn_var = np.zeros_like(output_model.data)
+        total_weight_flat_var = np.zeros_like(output_model.data)
         for model in self.input_models:
-            variance = getattr(model, name)
-            if variance is None or variance.size == 0:
-                log.debug(
-                    f"No data for '{name}' for model "
-                    f"{repr(model.meta.filename)}. Skipping ..."
+            # Do the read noise variance first, so it can be
+            # used for weights if needed
+            rn_var = self._resample_one_variance_array(
+                "var_rnoise", model, output_model)
+
+            # Find valid weighting values in the variance
+            if rn_var is not None:
+                mask = (rn_var > 0) & np.isfinite(rn_var)
+            else:
+                mask = np.full_like(rn_var, False)
+
+            # Set the weight for the image from the weight type
+            weight = np.ones(output_model.data.shape)
+            if self.weight_type == "ivm" and rn_var is not None:
+                weight[mask] = rn_var[mask] ** -1
+            elif self.weight_type == "exptime":
+                if resample_utils.check_for_tmeasure(model):
+                    weight[:] = model.meta.exposure.measurement_time
+                else:
+                    weight[:] = model.meta.exposure.exposure_time
+
+            # Weight and add the readnoise variance
+            # Note: floating point overflow is an issue if variance weights
+            # are used - it can't be squared before multiplication
+            if rn_var is not None:
+                mask = (rn_var >= 0) & np.isfinite(rn_var) & (weight > 0)
+                weighted_rn_var[mask] = np.nansum(
+                    [weighted_rn_var[mask],
+                     rn_var[mask] * weight[mask] * weight[mask]],
+                    axis=0
                 )
-                continue
+                total_weight_rn_var[mask] += weight[mask]
 
-            elif variance.shape != model.data.shape:
-                log.warning(
-                    f"Data shape mismatch for '{name}' for model "
-                    f"{repr(model.meta.filename)}. Skipping ..."
+            # Now do poisson and flat variance, updating only valid new values
+            # (zero is a valid value; negative, inf, or NaN are not)
+            pn_var = self._resample_one_variance_array(
+                "var_poisson", model, output_model)
+            if pn_var is not None:
+                mask = (pn_var >= 0) & np.isfinite(pn_var) & (weight > 0)
+                weighted_pn_var[mask] = np.nansum(
+                    [weighted_pn_var[mask],
+                     pn_var[mask] * weight[mask] * weight[mask]],
+                    axis=0
                 )
-                continue
+                total_weight_pn_var[mask] += weight[mask]
 
-            # Make input weight map of unity where there is science data
-            inwht = resample_utils.build_driz_weight(
-                model,
-                weight_type=None,
-                good_bits=self.good_bits
+            flat_var = self._resample_one_variance_array(
+                "var_flat", model, output_model)
+            if flat_var is not None:
+                mask = (flat_var >= 0) & np.isfinite(flat_var) & (weight > 0)
+                weighted_flat_var[mask] = np.nansum(
+                    [weighted_flat_var[mask],
+                     flat_var[mask] * weight[mask] * weight[mask]],
+                    axis=0
+                )
+                total_weight_flat_var[mask] += weight[mask]
+
+        # We now have a sum of the weighted resampled variances.
+        # Divide by the total weights, squared, and set in the output model.
+        # Zero weight and missing values are NaN in the output.
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "invalid value*", RuntimeWarning)
+            warnings.filterwarnings("ignore", "divide by zero*", RuntimeWarning)
+
+            output_variance = (weighted_rn_var
+                               / total_weight_rn_var / total_weight_rn_var)
+            setattr(output_model, "var_rnoise", output_variance)
+
+            output_variance = (weighted_pn_var
+                               / total_weight_pn_var / total_weight_pn_var)
+            setattr(output_model, "var_poisson", output_variance)
+
+            output_variance = (weighted_flat_var
+                               / total_weight_flat_var / total_weight_flat_var)
+            setattr(output_model, "var_flat", output_variance)
+
+    def _resample_one_variance_array(self, name, input_model, output_model):
+        """Resample one variance image from an input model.
+
+        The error image is passed to drizzle instead of the variance, to
+        better match kernel overlap and user weights to the data, in the
+        pixel averaging process. The drizzled error image is squared before
+        returning.
+        """
+        variance = getattr(input_model, name)
+        if variance is None or variance.size == 0:
+            log.debug(
+                f"No data for '{name}' for model "
+                f"{repr(input_model.meta.filename)}. Skipping ..."
             )
+            return
 
-            resampled_variance = np.zeros_like(output_model.data)
-            outwht = np.zeros_like(output_model.data)
-            outcon = np.zeros_like(output_model.con)
-
-            xmin, xmax, ymin, ymax = resample_utils._resample_range(
-                variance.shape,
-                model.meta.wcs.bounding_box
+        elif variance.shape != input_model.data.shape:
+            log.warning(
+                f"Data shape mismatch for '{name}' for model "
+                f"{repr(input_model.meta.filename)}. Skipping ..."
             )
+            return
 
-            iscale = model.meta.iscale
+        # Make input weight map
+        inwht = resample_utils.build_driz_weight(
+            input_model,
+            weight_type=self.weight_type,  # weights match science
+            good_bits=self.good_bits
+        )
 
-            # Resample the variance array. Fill "unpopulated" pixels with NaNs.
-            self.drizzle_arrays(
-                variance,
-                inwht,
-                model.meta.wcs,
-                output_wcs,
-                resampled_variance,
-                outwht,
-                outcon,
-                iscale=iscale**2,
-                pixfrac=self.pixfrac,
-                kernel=self.kernel,
-                fillval=np.nan,
-                xmin=xmin,
-                xmax=xmax,
-                ymin=ymin,
-                ymax=ymax
-            )
+        resampled_error = np.zeros_like(output_model.data)
+        outwht = np.zeros_like(output_model.data)
+        outcon = np.zeros_like(output_model.con)
 
-            # Add the inverse of the resampled variance to a running sum.
-            # Update only pixels (in the running sum) with valid new values:
-            mask = resampled_variance > 0
+        xmin, xmax, ymin, ymax = resample_utils._resample_range(
+            variance.shape,
+            input_model.meta.wcs.bounding_box
+        )
 
-            inverse_variance_sum[mask] = np.nansum(
-                [inverse_variance_sum[mask], np.reciprocal(resampled_variance[mask])],
-                axis=0
-            )
+        iscale = input_model.meta.iscale
 
-        # We now have a sum of the inverse resampled variances.  We need the
-        # inverse of that to get back to units of variance.
-        output_variance = np.reciprocal(inverse_variance_sum)
-
-        setattr(output_model, name, output_variance)
+        # Resample the error array. Fill "unpopulated" pixels with NaNs.
+        self.drizzle_arrays(
+            np.sqrt(variance),
+            inwht,
+            input_model.meta.wcs,
+            output_model.meta.wcs,
+            resampled_error,
+            outwht,
+            outcon,
+            iscale=iscale,
+            pixfrac=self.pixfrac,
+            kernel=self.kernel,
+            fillval=np.nan,
+            xmin=xmin,
+            xmax=xmax,
+            ymin=ymin,
+            ymax=ymax
+        )
+        return resampled_error ** 2
 
     def update_exposure_times(self, output_model):
         """Modify exposure time metadata in-place"""
         total_exposure_time = 0.
         exposure_times = {'start': [], 'end': []}
         duration = 0.0
+        total_measurement_time = 0.0
+        measurement_time_failures = []
         for exposure in self.input_models.models_grouped:
             total_exposure_time += exposure[0].meta.exposure.exposure_time
+            if not resample_utils.check_for_tmeasure(exposure[0]):
+                measurement_time_failures.append(1)
+            else:
+                total_measurement_time += exposure[0].meta.exposure.measurement_time
+                measurement_time_failures.append(0)
             exposure_times['start'].append(exposure[0].meta.exposure.start_time)
             exposure_times['end'].append(exposure[0].meta.exposure.end_time)
             duration += exposure[0].meta.exposure.duration
 
         # Update some basic exposure time values based on output_model
         output_model.meta.exposure.exposure_time = total_exposure_time
+        if not any(measurement_time_failures):
+            output_model.meta.exposure.measurement_time = total_measurement_time
         output_model.meta.exposure.start_time = min(exposure_times['start'])
         output_model.meta.exposure.end_time = max(exposure_times['end'])
-        output_model.meta.resample.product_exposure_time = total_exposure_time
 
         # Update other exposure time keywords:
         # XPOSURE (identical to the total effective exposure time, EFFEXPTM)
@@ -565,7 +680,7 @@ class ResampleData:
         kernel: str, optional
             The name of the kernel used to combine the input. The choice of
             kernel controls the distribution of flux over the kernel. The kernel
-            names are: "square", "gaussian", "point", "tophat", "turbo", "lanczos2",
+            names are: "square", "gaussian", "point", "turbo", "lanczos2",
             and "lanczos3". The square kernel is the default.
 
         fillval: str, optional

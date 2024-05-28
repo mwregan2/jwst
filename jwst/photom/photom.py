@@ -1,6 +1,5 @@
 import logging
 import functools
-import warnings
 
 import numpy as np
 from astropy import units as u
@@ -472,9 +471,7 @@ class DataSet():
             log.info(' subarray: %s', self.subarray)
             fields_to_match = {'subarray': self.subarray,
                                'filter': self.filter}
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                row = find_row(ftab.phot_table, fields_to_match)
+            row = find_row(ftab.phot_table, fields_to_match)
             if row is None:
                 # Search again using subarray="GENERIC" for old ref files
                 fields_to_match = {'subarray': 'GENERIC',
@@ -511,18 +508,10 @@ class DataSet():
         # MRS detectors
         elif self.detector == 'MIRIFUSHORT' or self.detector == 'MIRIFULONG':
 
-            # Reset conversion and pixel size values with DQ=NON_SCIENCE to 1,
-            # so no conversion is applied
-            where_dq = np.bitwise_and(ftab.dq, dqflags.pixel['NON_SCIENCE'])
-            ftab.data[where_dq > 0] = 1.0
-
-            # Reset NaN's in conversion array to 1
+            # Make sure all NaN's have DO_NOT_USE flag set
             where_nan = np.isnan(ftab.data)
-            ftab.data[where_nan] = 1.0
-
-            # Make sure all NaN's and zeros have DQ flags set
             ftab.dq[where_nan] = np.bitwise_or(ftab.dq[where_nan],
-                                               dqflags.pixel['NON_SCIENCE'])
+                                               dqflags.pixel['DO_NOT_USE'])
 
             # Compute the combined 2D sensitivity factors
             sens2d = ftab.data

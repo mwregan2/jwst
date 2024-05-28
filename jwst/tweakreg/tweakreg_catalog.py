@@ -1,7 +1,9 @@
 import logging
 import inspect
+import warnings
 
 from astropy.table import Table
+from astropy.utils.exceptions import AstropyUserWarning
 import numpy as np
 from photutils.detection import DAOStarFinder, IRAFStarFinder
 from photutils.segmentation import SourceFinder, SourceCatalog
@@ -146,7 +148,7 @@ def _DaoStarFinderWrapper(data, threshold, mask=None, **kwargs):
     return sources
 
 
-def make_tweakreg_catalog(model, snr_threshold, bkg_boxsize=400, starfinder='dao', starfinder_kwargs={}):
+def make_tweakreg_catalog(model, snr_threshold, bkg_boxsize=400, starfinder='iraf', starfinder_kwargs={}):
     """
     Create a catalog of point-line sources to be used for image
     alignment in tweakreg.
@@ -209,7 +211,10 @@ def make_tweakreg_catalog(model, snr_threshold, bkg_boxsize=400, starfinder='dao
     try:
         bkg = JWSTBackground(model.data, box_size=bkg_boxsize,
                              coverage_mask=coverage_mask)
-        threshold_img = bkg.background + (snr_threshold * bkg.background_rms)
+        with warnings.catch_warnings():
+            # suppress warning about NaNs being automatically masked - this is desired
+            warnings.simplefilter('ignore', AstropyUserWarning) 
+            threshold_img = bkg.background + (snr_threshold * bkg.background_rms)
     except ValueError as e:
         log.warning(f"Error determining sky background: {e.args[0]}")
         # return an empty catalog

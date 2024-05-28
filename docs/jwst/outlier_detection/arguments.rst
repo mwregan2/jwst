@@ -15,8 +15,8 @@ that control the behavior of the processing:
 
 ``--kernel`` (string, default='square')
   The form of the kernel function used to distribute flux onto a
-  resampled image. Options are 'square', 'turbo', 'point',
-  'lanczos', and 'tophat'.
+  resampled image. Options are 'square', 'turbo', 'point', and
+  'lanczos'.
 
 ``--fillval`` (string, default='INDEF')
   The value to assign to resampled image pixels that have zero weight or
@@ -70,10 +70,6 @@ that control the behavior of the processing:
   that should be considered 'good' when building the weight mask. See
   DQ flag :ref:`dq_parameter_specification` for details.
 
-``--scale_detection`` (bool, default=False)
-  Specifies whether or not to rescale the individual input images
-  to match total signal when doing comparisons.
-
 ``--allowed_memory`` (float, default=None)
   Specifies the fractional amount of
   free memory to allow when creating the resampled image. If ``None``, the
@@ -96,11 +92,11 @@ that control the behavior of the processing:
 
 ``--kernel_size`` (string, default='7 7')
   The size of the kernel to use to normalize the pixel differences. The kernel size
-  must only contain odd values. 
+  must only contain odd values.
 
 ``--threshold_percent`` (float, default=99.8)
   The threshold (in percent) of the normalized minimum pixel difference used to identify bad pixels.
-  Pixels with   a normalized minimum pixel difference above this percentage are flagged as a outlier. 
+  Pixels with   a normalized minimum pixel difference above this percentage are flagged as a outlier.
 
 ``--save_intermediate_results`` (boolean, default=False)
   Specifies whether or not to save any intermediate products created

@@ -1,6 +1,8 @@
 import pytest
 import numpy as np
 from scipy.ndimage import gaussian_filter
+from glob import glob
+import os
 
 from stdatamodels.jwst import datamodels
 
@@ -14,7 +16,6 @@ from jwst.outlier_detection.outlier_detection_step import (
     CORON_IMAGE_MODES,
 )
 from jwst.assign_wcs.pointing import create_fitswcs
-
 
 OUTLIER_DO_NOT_USE = np.bitwise_or(
     datamodels.dqflags.pixel["DO_NOT_USE"], datamodels.dqflags.pixel["OUTLIER"]
@@ -160,7 +161,7 @@ def we_three_sci():
     return we_many_sci(numsci=3)
 
 
-def test_outlier_step_no_outliers(we_three_sci, _jail):
+def test_outlier_step_no_outliers(we_three_sci, tmp_cwd):
     """Test whole step, no outliers"""
     container = ModelContainer(list(we_three_sci))
     pristine = container.copy()
@@ -177,12 +178,21 @@ def test_outlier_step_no_outliers(we_three_sci, _jail):
         np.testing.assert_allclose(image.dq, corrected.dq)
 
 
-def test_outlier_step(we_three_sci, _jail):
+def test_outlier_step(we_three_sci, tmp_cwd):
     """Test whole step with an outlier including saving intermediate and results files"""
     container = ModelContainer(list(we_three_sci))
 
     # Drop a CR on the science array
     container[0].data[12, 12] += 1
+
+    # Verify that intermediary files are removed
+    OutlierDetectionStep.call(container)
+    i2d_files = glob(os.path.join(tmp_cwd, '*i2d.fits'))
+    median_files = glob(os.path.join(tmp_cwd, '*median.fits'))
+    blot_files = glob(os.path.join(tmp_cwd, '*blot.fits'))
+    assert len(i2d_files) == 0
+    assert len(median_files) == 0
+    assert len(blot_files) == 0
 
     result = OutlierDetectionStep.call(
         container, save_results=True, save_intermediate_results=True
@@ -199,8 +209,16 @@ def test_outlier_step(we_three_sci, _jail):
     # Verify CR is flagged
     assert result[0].dq[12, 12] == OUTLIER_DO_NOT_USE
 
+    # Verify that intermediary files are saved at the specified location
+    i2d_files = glob(os.path.join(tmp_cwd, '*i2d.fits'))
+    median_files = glob(os.path.join(tmp_cwd, '*median.fits'))
+    blot_files = glob(os.path.join(tmp_cwd, '*blot.fits'))
+    assert len(i2d_files) != 0
+    assert len(median_files) != 0
+    assert len(blot_files) != 0
 
-def test_outlier_step_on_disk(we_three_sci, _jail):
+
+def test_outlier_step_on_disk(we_three_sci, tmp_cwd):
     """Test whole step with an outlier including saving intermediate and results files"""
 
     for model in we_three_sci:
@@ -230,7 +248,7 @@ def test_outlier_step_on_disk(we_three_sci, _jail):
     assert result[0].dq[12, 12] == OUTLIER_DO_NOT_USE
 
 
-def test_outlier_step_square_source_no_outliers(we_three_sci, _jail):
+def test_outlier_step_square_source_no_outliers(we_three_sci, tmp_cwd):
     """Test whole step with square source with sharp edges, no outliers"""
     container = ModelContainer(list(we_three_sci))
 
@@ -256,7 +274,7 @@ def test_outlier_step_square_source_no_outliers(we_three_sci, _jail):
 
 
 @pytest.mark.parametrize("exptype", IMAGE_MODES)
-def test_outlier_step_image_weak_CR_dither(exptype, _jail):
+def test_outlier_step_image_weak_CR_dither(exptype, tmp_cwd):
     """Test whole step with an outlier for imaging modes"""
     bkg = 1.5
     sig = 0.02
@@ -283,7 +301,7 @@ def test_outlier_step_image_weak_CR_dither(exptype, _jail):
 
 
 @pytest.mark.parametrize("exptype, tsovisit", exptypes_tso + exptypes_coron)
-def test_outlier_step_image_weak_CR_nodither(exptype, tsovisit, _jail):
+def test_outlier_step_image_weak_CR_nodither(exptype, tsovisit, tmp_cwd):
     """Test whole step with an outlier for TSO & coronagraphic modes"""
     bkg = 1.5
     sig = 0.02
