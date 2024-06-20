@@ -50,6 +50,7 @@ class JumpStep(Step):
         minimum_sigclip_groups = integer(default=100) # The minimum number of groups to switch to sigma clipping
         only_use_ints = boolean(default=True) # In sigclip only compare the same group across ints, if False compare all groups
     """
+#        write_saturated_snowballs_to_file = False # Write the locations of the saturated cores of snowballs to a file
 
     reference_file_types = ['gain', 'readnoise']
 

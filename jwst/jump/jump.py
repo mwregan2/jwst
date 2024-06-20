@@ -41,6 +41,7 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
     err = input_model.err
     exp_start = input_model.meta.exposure.start_time
     exp_end = input_model.meta.exposure.end_time
+    detector_name = input_model.meta.instrument.detector
     output_model = input_model.copy()
 
     # determine the number of groups that correspond to the after_jump times
@@ -74,6 +75,7 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
                                     dqflags.pixel,
                                     exp_start,
                                     exp_end,
+                                    detector_name,
                                     after_jump_flag_dn1,
                                     after_jump_flag_n1,
                                     after_jump_flag_dn2,
