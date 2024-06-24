@@ -45,7 +45,7 @@ class ResampleData:
     """
 
     def __init__(self, input_models, output=None, single=False, blendheaders=True,
-                 pixfrac=1.0, kernel="square", fillval="INDEF", wht_type="ivm",
+                 pixfrac=1.0, kernel="square", fillval="NAN", wht_type="ivm",
                  good_bits=0, pscale_ratio=1.0, pscale=None, **kwargs):
         """
         Parameters
@@ -114,7 +114,7 @@ class ResampleData:
                 self.output_wcs.array_shape = output_shape[::-1]
 
             if output_wcs.pixel_area is None:
-                output_pix_area = _compute_image_pixel_area(self.output_wcs)
+                output_pix_area = compute_image_pixel_area(self.output_wcs)
                 if output_pix_area is None:
                     raise ValueError(
                         "Unable to compute output pixel area from 'output_wcs'."
@@ -250,7 +250,7 @@ class ResampleData:
                 if (input_pixflux_area and
                         'SPECTRAL' not in img.meta.wcs.output_frame.axes_type):
                     img.meta.wcs.array_shape = img.data.shape
-                    input_pixel_area = _compute_image_pixel_area(img.meta.wcs)
+                    input_pixel_area = compute_image_pixel_area(img.meta.wcs)
                     if input_pixel_area is None:
                         raise ValueError(
                             "Unable to compute input pixel area from WCS of input "
@@ -336,7 +336,7 @@ class ResampleData:
             if (input_pixflux_area and
                     'SPECTRAL' not in img.meta.wcs.output_frame.axes_type):
                 img.meta.wcs.array_shape = img.data.shape
-                input_pixel_area = _compute_image_pixel_area(img.meta.wcs)
+                input_pixel_area = compute_image_pixel_area(img.meta.wcs)
                 if input_pixel_area is None:
                     raise ValueError(
                         "Unable to compute input pixel area from WCS of input "
@@ -595,7 +595,7 @@ class ResampleData:
     def drizzle_arrays(insci, inwht, input_wcs, output_wcs, outsci, outwht,
                        outcon, uniqid=1, xmin=0, xmax=0, ymin=0, ymax=0,
                        iscale=1.0, pixfrac=1.0, kernel='square',
-                       fillval="INDEF", wtscale=1.0):
+                       fillval="NAN", wtscale=1.0):
         """
         Low level routine for performing 'drizzle' operation on one image.
 
@@ -685,7 +685,7 @@ class ResampleData:
 
         fillval: str, optional
             The value a pixel is set to in the output if the input image does
-            not overlap it. The default value of INDEF does not set a value.
+            not overlap it. The default value of NAN sets NaN values.
 
         Returns
         -------
@@ -698,7 +698,7 @@ class ResampleData:
 
         # Insure that the fillval parameter gets properly interpreted for use with tdriz
         if util.is_blank(str(fillval)):
-            fillval = 'INDEF'
+            fillval = 'NAN'
         else:
             fillval = str(fillval)
 
@@ -805,7 +805,7 @@ def _get_boundary_points(xmin, xmax, ymin, ymax, dx=None, dy=None, shrink=0):
     return x, y, area, center, b, r, t, l
 
 
-def _compute_image_pixel_area(wcs):
+def compute_image_pixel_area(wcs):
     """ Computes pixel area in steradians.
     """
     if wcs.array_shape is None:
