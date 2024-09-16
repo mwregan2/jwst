@@ -2,7 +2,7 @@ import logging
 import numpy as np
 from stcal.jump.jump import detect_jumps
 from stdatamodels.jwst.datamodels import dqflags
-
+from astropy.io import fits
 from ..lib import reffile_utils
 
 log = logging.getLogger(__name__)
@@ -49,6 +49,11 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
     gtime = input_model.meta.exposure.group_time
     after_jump_flag_n1 = int(after_jump_flag_time1 // gtime)
     after_jump_flag_n2 = int(after_jump_flag_time2 // gtime)
+    print("gtime", gtime)
+    print("after_jump_flag_n1", after_jump_flag_n1)
+    print("after_jump_flag_n2", after_jump_flag_n2)
+    print("after_jump_flag_time1", after_jump_flag_time1)
+    print("after_jump_flag_time2", after_jump_flag_time2)
     grps_masked_after_shower = int(time_masked_after_shower // gtime)
     snowball_grps_masked_next_int = int(snowball_time_masked_next_int // gtime)
     # Get 2D gain and read noise values from their respective models
@@ -99,7 +104,7 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
                                     persist_grps_flagged = snowball_grps_masked_next_int
                                     )
 
-
+    fits.writeto("readnoise.fits", stddev, overwrite=True)
     # Update the DQ arrays of the output model with the jump detection results
     output_model.groupdq = new_gdq
     output_model.pixeldq = new_pdq
