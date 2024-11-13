@@ -2,7 +2,7 @@ import logging
 import numpy as np
 from stcal.jump.jump import detect_jumps
 from stdatamodels.jwst.datamodels import dqflags
-from astropy.io import fits
+
 from ..lib import reffile_utils
 
 log = logging.getLogger(__name__)
@@ -104,8 +104,7 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
                                     persist_grps_flagged = snowball_grps_masked_next_int
                                     )
 
-    fits.writeto("readnoise.fits", stddev, overwrite=True)
-    # Update the DQ arrays of the output model with the jump detection results
+       # Update the DQ arrays of the output model with the jump detection results
     output_model.groupdq = new_gdq
     output_model.pixeldq = new_pdq
     # determine the total number of groups with all pixels set to DO_NOT_USE
