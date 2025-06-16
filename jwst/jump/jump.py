@@ -28,7 +28,9 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
                      minimum_sigclip_groups=100,
                      only_use_ints=True,
                      mask_snowball_persist_next_int=True,
-                     snowball_time_masked_next_int=250
+                     snowball_time_masked_next_int=250,
+                     fits_loc='./',
+                     write_saturated_cores=False,
                      ):
 
     # Runs `detect_jumps` in stcal
@@ -39,8 +41,6 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
     gdq = input_model.groupdq
     pdq = input_model.pixeldq
     err = input_model.err
-    exp_start = input_model.meta.exposure.start_time
-    exp_end = input_model.meta.exposure.end_time
     detector_name = input_model.meta.instrument.detector
     output_model = input_model.copy()
 
@@ -49,11 +49,6 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
     gtime = input_model.meta.exposure.group_time
     after_jump_flag_n1 = int(after_jump_flag_time1 // gtime)
     after_jump_flag_n2 = int(after_jump_flag_time2 // gtime)
-    print("gtime", gtime)
-    print("after_jump_flag_n1", after_jump_flag_n1)
-    print("after_jump_flag_n2", after_jump_flag_n2)
-    print("after_jump_flag_time1", after_jump_flag_time1)
-    print("after_jump_flag_time2", after_jump_flag_time2)
     grps_masked_after_shower = int(time_masked_after_shower // gtime)
     snowball_grps_masked_next_int = int(snowball_time_masked_next_int // gtime)
     # Get 2D gain and read noise values from their respective models
@@ -78,8 +73,8 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
                                     min_jump_to_flag_neighbors,
                                     flag_4_neighbors,
                                     dqflags.pixel,
-                                    exp_start,
-                                    exp_end,
+                                    input_model.meta.exposure.start_time,
+                                    input_model.meta.exposure.end_time,
                                     detector_name,
                                     after_jump_flag_dn1,
                                     after_jump_flag_n1,
@@ -101,7 +96,9 @@ def run_detect_jumps(input_model, gain_model, readnoise_model,
                                     minimum_sigclip_groups=minimum_sigclip_groups,
                                     only_use_ints=only_use_ints,
                                     mask_persist_grps_next_int = mask_snowball_persist_next_int,
-                                    persist_grps_flagged = snowball_grps_masked_next_int
+                                    persist_grps_flagged=snowball_grps_masked_next_int,
+                                    dir_name = fits_loc,
+                                    write_saturated_cores=write_saturated_cores,
                                     )
 
        # Update the DQ arrays of the output model with the jump detection results

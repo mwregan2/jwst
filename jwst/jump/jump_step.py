@@ -27,7 +27,7 @@ class JumpStep(Step):
         after_jump_flag_dn2 = float(default=0) # 2nd flag groups after jump above DN threshold
         after_jump_flag_time2 = float(default=0) # 2nd flag groups after jump groups within specified time
         expand_large_events = boolean(default=False) # Turns on Snowball detector for NIR detectors
-        min_sat_area = float(default=1.0) # minimum required area for the central saturation of snowballs
+        min_sat_area = float(default=1.0) # minimum required area for the central dration of snowballs
         min_jump_area = float(default=5.0) # minimum area to trigger large events processing
         expand_factor = float(default=2.0) # The expansion factor for the enclosing circles or ellipses
         use_ellipses = boolean(default=False) # deprecated
@@ -49,8 +49,8 @@ class JumpStep(Step):
         minimum_groups = integer(default=3) # The minimum number of groups to perform jump detection using sigma clipping
         minimum_sigclip_groups = integer(default=100) # The minimum number of groups to switch to sigma clipping
         only_use_ints = boolean(default=True) # In sigclip only compare the same group across ints, if False compare all groups
+        write_saturated_cores = boolean(default=False) # Write the saturated cores to disk
     """
-#        write_saturated_snowballs_to_file = False # Write the locations of the saturated cores of snowballs to a file
 
     reference_file_types = ['gain', 'readnoise']
 
@@ -102,6 +102,10 @@ class JumpStep(Step):
             self.log.info('Using READNOISE reference file: %s',
                           readnoise_filename)
             readnoise_model = datamodels.ReadnoiseModel(readnoise_filename)
+            if self.parent:
+                fits_loc = self.parent.output_dir
+            else:
+                fits_loc = self.output_dir
             # Call the jump detection routine
             result = run_detect_jumps(input_model, gain_model, readnoise_model,
                                       rej_thresh, three_grp_rej_thresh, four_grp_rej_thresh, max_cores,
@@ -128,7 +132,9 @@ class JumpStep(Step):
                                       minimum_sigclip_groups=self.minimum_sigclip_groups,
                                       only_use_ints=self.only_use_ints,
                                       mask_snowball_persist_next_int=self.mask_snowball_core_next_int,
-                                      snowball_time_masked_next_int=self.snowball_time_masked_next_int
+                                      snowball_time_masked_next_int=self.snowball_time_masked_next_int,
+                                      fits_loc=fits_loc,
+                                      write_saturated_cores=self.write_saturated_cores,
                                       )
 
 
