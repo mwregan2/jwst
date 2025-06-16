@@ -1,7 +1,7 @@
 """Regression tests for Moving Target MIRI MRS mode"""
 import os
 import pytest
-from astropy.io.fits.diff import FITSDiff
+from jwst.regtest.st_fitsdiff import STFITSDiff as FITSDiff
 from jwst.stpipe import Step
 
 # Define artifactory source and truth
@@ -47,7 +47,7 @@ def test_spec3_moving_target(run_spec3_moving_target, fitsdiff_default_kwargs, o
     rtdata = run_spec3_moving_target
     rtdata.output = output
 
-    rtdata.get_truth(os.path.join(TRUTH_PATH, rtdata.output))
+    rtdata.get_truth(os.path.join(TRUTH_PATH, output))
 
     diff = FITSDiff(rtdata.output, rtdata.truth, **fitsdiff_default_kwargs)
     assert diff.identical, diff.report()

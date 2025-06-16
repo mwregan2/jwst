@@ -1,13 +1,6 @@
-import pytest
+from astropy.utils.data import get_pkg_data_filename
 
-from pprint import pprint
-
-from jwst.associations.tests.helpers import (
-    level3_rule_path,
-    mkstemp_pool_file,
-    t_path,
-)
-
+from jwst.associations.tests.helpers import combine_pools
 from jwst.associations.main import Main
 
 
@@ -28,7 +21,6 @@ def get_jitter_not_jitter(pool_path):
         lines = fd.readlines()
     header = lines[0]
     pool = lines[1:]
-
 
     delim = "|"
     sheader = header.split(delim)
@@ -62,14 +54,14 @@ def get_expnames(asn):
 
 def jitter_present(jitter, associations):
     """
-    For level 3 images make sure pool candidates identifed as
+    For level 3 images make sure pool candidates identified as
     jitter are not present in association files.
     """
     for asn in associations:
         # Only care about level 3 images
         if "image3" not in asn.asn_name:
             continue
-        # For level 3 images make sure pool candidates identifed as
+        # For level 3 images make sure pool candidates identified as
         # jitter are not present in association files.
         exp_names = get_expnames(asn)
         for jit in jitter:
@@ -85,11 +77,15 @@ def test_level3_wfscmb_jitter_suppression(tmp_path):
     Make sure no candidate from the pool with DMS_NOTE equal to
     WFSC_LOS_JITTER is in any association.
     """
-    pfile = "data/pool_033_wfs_jitter.csv"
-    with mkstemp_pool_file(t_path(pfile)) as pool_path:
-        cmd_args = [pool_path, f"--path={tmp_path}"]
-        generated = Main.cli(cmd_args)
-        jitter = get_jitter_not_jitter(pool_path)
-
-    jitter_present_in_asn = jitter_present(jitter, generated.associations)
-    assert jitter_present_in_asn == False
+    pool_path = str(tmp_path / "pool.csv")
+    pool = combine_pools(
+        get_pkg_data_filename(
+            "data/pool_033_wfs_jitter.csv",
+            package="jwst.associations.tests"
+        )
+    )
+    pool.write(pool_path, format="ascii", delimiter="|")
+    cmd_args = [pool_path, f"--path={tmp_path}"]
+    generated = Main.cli(cmd_args)
+    jitter = get_jitter_not_jitter(pool_path)
+    assert not jitter_present(jitter, generated.associations)

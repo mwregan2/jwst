@@ -14,13 +14,11 @@ objects 9 and 19 should have order 1 extracted
 object 25 should have partial boxes for both orders
 object 26 should be excluded
 """
-import os
 import pytest
 import numpy as np
-
 from astropy.io import fits
+from astropy.utils.data import get_pkg_data_filename
 from gwcs import wcs
-
 from stdatamodels.jwst.datamodels import ImageModel, CubeModel, SlitModel, MultiSlitModel
 
 from jwst.assign_wcs.util import create_grism_bbox
@@ -28,14 +26,9 @@ from jwst.assign_wcs import AssignWcsStep, nircam
 
 from jwst.extract_2d.extract_2d_step import Extract2dStep
 from jwst.extract_2d.grisms import extract_tso_object, extract_grism_objects, compute_tso_offset_center
-from jwst.extract_2d.tests import data
-
 
 # Allowed settings for nircam
 tsgrism_filters = ['F277W', 'F444W', 'F322W2', 'F356W']
-
-data_path = os.path.split(os.path.abspath(data.__file__))[0]
-
 
 # Default wcs information
 # This is set for a standard nircam image just as an example
@@ -68,13 +61,6 @@ wcs_tso_kw = {'wcsaxes': 2, 'ra_ref': 86.9875, 'dec_ref': 23.423,
               'v2_ref': 95.043034, 'v3_ref': -556.150466, 'roll_ref': 359.9521,
               'v3i_yang': -0.37562675, 'vparity': -1,
               }
-
-
-def get_file_path(filename):
-    """
-    Construct an absolute path.
-    """
-    return os.path.join(data_path, filename)
 
 
 def create_hdul(detector='NRCALONG', channel='LONG', module='A',
@@ -203,13 +189,14 @@ def test_create_box_fits():
 
     The objects selected here should be contained on the image
     """
-    source_catalog = get_file_path('step_SourceCatalogStep_cat.ecsv')
+    source_catalog = get_pkg_data_filename(
+        "data/step_SourceCatalogStep_cat.ecsv", package="jwst.extract_2d.tests")
     hdul = create_hdul(exptype='NRC_WFSS', pupil='GRISMR', wcskeys=wcs_wfss_kw)
     im = ImageModel(hdul)
     # Add fake data to pass a shape to wfss_imaging_wcs
     im.data = np.zeros((512, 512))
     aswcs = AssignWcsStep()
-    imwcs = aswcs(im)
+    imwcs = aswcs.run(im)
     imwcs.meta.source_catalog = source_catalog
     refs = get_reference_files(im)
     test_boxes = create_grism_bbox(imwcs, refs,
@@ -235,14 +222,15 @@ def test_create_box_gwcs():
     reference file. The settings and catalog used should produce
     first order trace boxes for the objects.
     """
-    source_catalog = get_file_path('step_SourceCatalogStep_cat.ecsv')
+    source_catalog = get_pkg_data_filename(
+        "data/step_SourceCatalogStep_cat.ecsv", package="jwst.extract_2d.tests")
     hdul = create_hdul(exptype='NRC_WFSS', pupil='GRISMR', wcskeys=wcs_wfss_kw)
     im = ImageModel(hdul)
     # Add fake data to pass a shape to wfss_imaging_wcs
     # The data array is not relevant
     im.data = np.zeros((512, 512))
     aswcs = AssignWcsStep()
-    imwcs = aswcs(im)
+    imwcs = aswcs.run(im)
     imwcs.meta.source_catalog = source_catalog
     refs = get_reference_files(im)
     test_boxes = create_grism_bbox(imwcs, refs,
@@ -261,14 +249,15 @@ def test_create_box_gwcs():
 
 def setup_image_cat():
     """basic setup for image header and references."""
-    source_catalog = get_file_path('step_SourceCatalogStep_cat.ecsv')
+    source_catalog = get_pkg_data_filename(
+        "data/step_SourceCatalogStep_cat.ecsv", package="jwst.extract_2d.tests")
     hdul = create_hdul(exptype='NRC_WFSS', pupil='GRISMR', wcskeys=wcs_wfss_kw)
     im = ImageModel(hdul)
     # Add fake data to pass a shape to wfss_imaging_wcs
     im.data = np.zeros((512, 512))
     im.meta.source_catalog = source_catalog
     aswcs = AssignWcsStep()
-    imwcs = aswcs(im)
+    imwcs = aswcs.run(im)
     refs = get_reference_files(im)
 
     return imwcs, refs
@@ -394,7 +383,8 @@ def test_extract_wfss_object():
     on the detector of expected locations.
 
     """
-    source_catalog = get_file_path('step_SourceCatalogStep_cat.ecsv')
+    source_catalog = get_pkg_data_filename(
+        "data/step_SourceCatalogStep_cat.ecsv", package="jwst.extract_2d.tests")
     wcsimage = create_wfss_image(pupil='GRISMR')
     wcsimage.meta.source_catalog = source_catalog
     refs = get_reference_files(wcsimage)

@@ -7,13 +7,13 @@ from .background.background_step import BackgroundStep
 from .badpix_selfcal.badpix_selfcal_step import BadpixSelfcalStep
 from .barshadow.barshadow_step import BarShadowStep
 from .charge_migration.charge_migration_step import ChargeMigrationStep
+from .clean_flicker_noise.clean_flicker_noise_step import CleanFlickerNoiseStep
 from .combine_1d.combine_1d_step import Combine1dStep
 from .coron.stack_refs_step import StackRefsStep
 from .coron.align_refs_step import AlignRefsStep
 from .coron.klip_step import KlipStep
 from .coron.hlsp_step import HlspStep
 from .cube_build.cube_build_step import CubeBuildStep
-from .cube_skymatch.cube_skymatch_step import CubeSkyMatchStep
 from .dark_current.dark_current_step import DarkCurrentStep
 from .dq_init.dq_init_step import DQInitStep
 from .emicorr.emicorr_step import EmiCorrStep
@@ -76,8 +76,8 @@ __all__ = [
     "AlignRefsStep",
     "KlipStep",
     "HlspStep",
+    "CleanFlickerNoiseStep",
     "CubeBuildStep",
-    "CubeSkyMatchStep",
     "DarkCurrentStep",
     "DQInitStep",
     "EmiCorrStep",

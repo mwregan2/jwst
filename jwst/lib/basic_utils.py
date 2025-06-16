@@ -1,51 +1,25 @@
-"""General utility objects"""
-
-from stdatamodels.jwst.datamodels import dqflags
-import numpy as np
-
-
-def set_nans_to_donotuse(data, dq):
-    """Set all NaN values in the data that have an even value to
-    DO_NOT_USE.
-
-    Parameters
-    ----------
-    data : numpy array
-        The science data array to find NaN values and
-        check of these have a DQ flag=DO_NOT_USE, or
-        set it if not.
-
-    dq : numpy array
-        The DQ array to be checked.
-
-    Returns
-    -------
-    dq : numpy array
-        The updated DQ array.
-    """
-    dq[np.isnan(data)] |= dqflags.pixel['DO_NOT_USE']
-    return dq
+"""General utility objects."""
 
 
 class LoggingContext:
-    """Logging context manager
+    """
+    Logging context manager.
 
-    Keep logging configuration within a context
-
-    Based on the Python 3 Logging Cookbook example
+    Keep logging configuration within a context.
+    Based on the Python 3 Logging Cookbook example.
 
     Parameters
-    ==========
-    logger: logging.Logger
+    ----------
+    logger : logging.Logger
         The logger to modify.
 
-    level: int
+    level : int
         The log level to set.
 
-    handler: logging.Handler
+    handler : logging.Handler
         The handler to use.
 
-    close: bool
+    close : bool
         Close the handler when done.
     """
 

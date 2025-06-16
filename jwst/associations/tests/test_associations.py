@@ -1,29 +1,27 @@
 """test_associations: Test of general Association functionality."""
 import pytest
+from astropy.utils.data import get_pkg_data_filename
 
 from jwst.associations.tests import helpers
-
 from jwst.associations import (
     Association,
     AssociationError,
     AssociationRegistry,
     generate)
-from jwst.associations.registry import (
-    import_from_file,
-)
 from jwst.associations.lib.dms_base import DMSAttrConstraint
 
 
 # Basic Association object
 def test_read_assoc_defs():
     rules = AssociationRegistry(
-        [helpers.t_path('data/asn_rules_set1.py')],
+        [get_pkg_data_filename(
+            "data/asn_rules_set1.py", package="jwst.associations.tests")],
         include_default=False
     )
     assert len(rules) >= 2
     rule_names = helpers.get_rule_names(rules)
-    assert 'DMS_Level3_Base_Set1' not in rules
-    valid_rules = ['Asn_Dither_Set1', 'Asn_WFS_Set1']
+    assert 'DMSLevel3BaseSet1' not in rules
+    valid_rules = ['AsnDitherSet1', 'AsnWFSSet1']
     for rule in valid_rules:
         assert rule in rule_names
 
@@ -46,24 +44,26 @@ def test_registry_backref():
 
 def test_nodefs():
     with pytest.raises(AssociationError):
-        rules = AssociationRegistry(include_default=False)
+        AssociationRegistry(include_default=False)
 
 
 def test_multi_rules():
     rule_files = [
-        helpers.t_path('data/asn_rules_set1.py'),
-        helpers.t_path('data/asn_rules_set2.py')
+        get_pkg_data_filename(
+            "data/asn_rules_set1.py", package="jwst.associations.tests"),
+        get_pkg_data_filename(
+            "data/asn_rules_set2.py", package="jwst.associations.tests")
     ]
     rules = AssociationRegistry(rule_files, include_default=False)
     assert len(rules) == 4
     rule_names = helpers.get_rule_names(rules)
-    assert 'DMS_Level3_Base_Set1' not in rule_names
-    assert 'DMS_Level3_Base_Set2' not in rule_names
+    assert 'DMSLevel3BaseSet1' not in rule_names
+    assert 'DMSLevel3BaseSet2' not in rule_names
     valid_rules = [
-        'Asn_Dither_Set1',
-        'Asn_Dither_Set2',
-        'Asn_WFS_Set1',
-        'Asn_WFS_Set2'
+        'AsnDitherSet1',
+        'AsnDitherSet2',
+        'AsnWFSSet1',
+        'AsnWFSSet2'
     ]
 
     for rule in valid_rules:
@@ -84,7 +84,9 @@ def test_base_instantiation():
                 value='V99009001001P0000000002101',
                 sources=['obs_id']
             ),
-            helpers.t_path('data/pool_018_all_exptypes.csv'),
+            get_pkg_data_filename(
+                "data/pool_018_all_exptypes.csv",
+                package="jwst.associations.tests"),
             1,
         ),
         (
@@ -93,7 +95,9 @@ def test_base_instantiation():
                 value='junk',
                 sources=['obs_id']
             ),
-            helpers.t_path('data/pool_001_candidates.csv'),
+            get_pkg_data_filename(
+                "data/pool_001_candidates.csv",
+                package="jwst.associations.tests"),
             0,
         ),
         (
@@ -105,7 +109,9 @@ def test_base_instantiation():
                 is_acid=True,
                 evaluate=True,
             ),
-            helpers.t_path('data/pool_001_candidates.csv'),
+            get_pkg_data_filename(
+                "data/pool_001_candidates.csv",
+                package="jwst.associations.tests"),
             22,
         ),
         (
@@ -117,7 +123,9 @@ def test_base_instantiation():
                 is_acid=True,
                 evaluate=True,
             ),
-            helpers.t_path('data/pool_001_candidates.csv'),
+            get_pkg_data_filename(
+                "data/pool_001_candidates.csv",
+                package="jwst.associations.tests"),
             24,
         ),
     ]

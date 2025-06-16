@@ -6,8 +6,7 @@ Description
 
 Assumptions
 -----------
-It is assumed that the input science data have *NOT* had the zero group (or
-bias) subtracted. We also do not want the dark subtraction process to remove
+We do not want the dark subtraction process to remove
 the bias signal from the science exposure, therefore the dark reference data
 should have their own group zero subtracted from all groups. This means that
 group zero of the dark reference data will effectively be zero-valued.
@@ -31,13 +30,8 @@ If the science exposure used NFRAMES>1 or GROUPGAP>0, the dark
 reference file data are reconstructed on-the-fly by the step to match the frame
 averaging and groupgap settings of the science exposure. The reconstructed dark
 data are created by averaging NFRAMES adjacent dark frames and skipping
-GROUPGAP intervening frames.
-
-The frame-averaged dark is constructed using the following scheme:
-
-#. SCI arrays are computed as the mean of the original dark SCI arrays
-#. ERR arrays are computed as the uncertainty in the mean, using
-   :math:`\frac{\sqrt {\sum \mathrm{ERR}^2}}{nframes}`
+GROUPGAP intervening frames; the frame-averaged dark data is constructed by
+computing the mean of the original dark SCI array across NFRAMES.
 
 The dark reference data are not integration-dependent for most instruments,
 hence the same group-by-group dark current data are subtracted from every
@@ -49,8 +43,6 @@ reference files contain data for only 2 or 3 integrations, which are directly
 subtracted from the corresponding first few integrations of the science exposure.
 The data in the last integration of the dark reference file is applied to all
 remaining science integrations.
-
-The ERR arrays of the science data are currently not modified by this step.
 
 The DQ flags from the dark reference file are propagated into the science
 exposure PIXELDQ array using a bitwise OR operation.
@@ -64,9 +56,11 @@ Any pixel values in the dark reference data that are set to NaN will have their
 values reset to zero before being subtracted from the science data, which
 will effectively skip the dark subtraction operation for those pixels.
 
-**Note**: If the input science exposure contains more groups than the available
-dark reference file, no dark subtraction will be applied and the input data
-will be returned unchanged.
+If the input science exposure contains more groups than the available
+dark reference file, the dark reference file will be extrapolated to match the
+number of groups present in the science exposure. This extrapolation generates
+new frames using the difference of the last two frames provided in the dark
+reference file.
 
 Subarrays
 ---------

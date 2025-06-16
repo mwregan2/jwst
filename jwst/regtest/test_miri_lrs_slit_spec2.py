@@ -1,4 +1,4 @@
-from astropy.io.fits.diff import FITSDiff
+from jwst.regtest.st_fitsdiff import STFITSDiff as FITSDiff
 from gwcs.wcstools import grid_from_bounding_box
 from numpy.testing import assert_allclose
 import pytest
@@ -7,10 +7,14 @@ from stdatamodels.jwst import datamodels
 
 from jwst.stpipe import Step
 from jwst.extract_1d import Extract1dStep
+from stcal.alignment import util
+
+# Mark all tests in this module
+pytestmark = [pytest.mark.bigdata]
 
 
 @pytest.fixture(scope="module")
-def run_pipeline(rtdata_module):
+def run_pipeline(rtdata_module, resource_tracker):
     """Run the calwebb_spec2 pipeline on an ASN of nodded MIRI LRS
        fixedslit exposures."""
     rtdata = rtdata_module
@@ -29,10 +33,14 @@ def run_pipeline(rtdata_module):
             "--steps.pixel_replace.save_results=true",
             "--steps.bkg_subtract.save_combined_background=true"
             ]
-    Step.from_cmdline(args)
+    with resource_tracker.track():
+        Step.from_cmdline(args)
 
 
-@pytest.mark.bigdata
+def test_log_tracked_resources_spec2(log_tracked_resources, run_pipeline):
+    log_tracked_resources()
+
+
 @pytest.mark.parametrize("suffix", [
     "assign_wcs", "combinedbackground", "bsub", "srctype", "flat_field", "pathloss",
     "cal", "pixel_replace", "s2d", "x1d"])
@@ -52,7 +60,6 @@ def test_miri_lrs_slit_spec2(run_pipeline, fitsdiff_default_kwargs, suffix, rtda
     assert diff.identical, diff.report()
 
 
-@pytest.mark.bigdata
 def test_miri_lrs_extract1d_from_cal(run_pipeline, rtdata_module, fitsdiff_default_kwargs):
     rtdata = rtdata_module
     rtdata.input = "jw01530005001_03103_00001_mirimage_cal.fits"
@@ -64,28 +71,8 @@ def test_miri_lrs_extract1d_from_cal(run_pipeline, rtdata_module, fitsdiff_defau
     assert diff.identical, diff.report()
 
 
-@pytest.mark.bigdata
-def test_miri_lrs_extract1d_image_ref(run_pipeline, rtdata_module, fitsdiff_default_kwargs):
-    rtdata = rtdata_module
-
-    rtdata.get_data("miri/lrs/jw01530005001_03103_00001_mirimage_image_ref.fits")
-    rtdata.input = "jw01530005001_03103_00001_mirimage_cal.fits"
-    Extract1dStep.call(rtdata.input,
-                       override_extract1d="jw01530005001_03103_00001_mirimage_image_ref.fits",
-                       suffix='x1dfromrefimage',
-                       save_results=True)
-    output = "jw01530005001_03103_00001_mirimage_x1dfromrefimage.fits"
-    rtdata.output = output
-    rtdata.get_truth(f"truth/test_miri_lrs_slit_spec2/{output}")
-
-    diff = FITSDiff(rtdata.output, rtdata.truth, **fitsdiff_default_kwargs)
-    assert diff.identical, diff.report()
-
-
-@pytest.mark.bigdata
 def test_miri_lrs_slit_wcs(run_pipeline, rtdata_module, fitsdiff_default_kwargs):
     rtdata = rtdata_module
-
     # get input assign_wcs and truth file
     output = "jw01530005001_03103_00001_mirimage_assign_wcs.fits"
     rtdata.output = output
@@ -105,3 +92,12 @@ def test_miri_lrs_slit_wcs(run_pipeline, rtdata_module, fitsdiff_default_kwargs)
         xtruth, ytruth = im_truth.meta.wcs.backward_transform(ratruth, dectruth, lamtruth)
         assert_allclose(xtest, xtruth)
         assert_allclose(ytest, ytruth)
+
+        # Test the s_region. S_region is formed by footprint which contains
+        # floats rather than a string. Test footprint
+        sregion = im.meta.wcsinfo.s_region
+        sregion_test = im_truth.meta.wcsinfo.s_region
+        footprint=util.sregion_to_footprint(sregion)
+        footprint_test = util.sregion_to_footprint(sregion_test)
+        assert_allclose(footprint, footprint_test)
+

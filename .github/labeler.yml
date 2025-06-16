@@ -81,11 +81,6 @@ cube_build:
     - any-glob-to-any-file:
       - 'jwst/cube_build/**'
 
-cube_skymatch:
-  - changed-files:
-    - any-glob-to-any-file:
-      - 'jwst/cube_skymatch/**'
-
 dark_current:
   - changed-files:
     - any-glob-to-any-file:
@@ -125,11 +120,6 @@ firstframe:
   - changed-files:
     - any-glob-to-any-file:
       - 'jwst/firstframe/**'
-
-fits_generator:
-  - changed-files:
-    - any-glob-to-any-file:
-      - 'jwst/fits_generator/**'
 
 flatfield:
   - changed-files:

@@ -3,6 +3,7 @@ Unit test for Cube Build testing reading in MIRI cubepars ref file and using it
 """
 
 import numpy as np
+import os
 import pytest
 from astropy.io import fits
 
@@ -11,8 +12,9 @@ from stdatamodels.jwst.datamodels import IFUImageModel
 
 from jwst import assign_wcs
 from jwst.cube_build import CubeBuildStep
-from jwst.cube_build.file_table import ErrorNoAssignWCS
-from jwst.cube_build.cube_build import ErrorNoChannels
+from jwst.cube_build.file_table import NoAssignWCSError
+from jwst.cube_build.cube_build import NoChannelsError
+from jwst.datamodels import ModelContainer
 
 
 @pytest.fixture(scope='module')
@@ -94,7 +96,7 @@ def miri_image():
     image = IFUImageModel((20, 20))
     image.data = np.random.random((20, 20))
     image.meta.instrument.name = 'MIRI'
-    image.meta.instrument.detector = 'MIRIFULONG'
+    image.meta.instrument.detector = 'MIRIFUSHORT'
     image.meta.exposure.type = 'MIR_MRS'
     image.meta.instrument.channel = '12'
     image.meta.instrument.band = 'SHORT'
@@ -116,22 +118,22 @@ def test_call_cube_build(tmp_cwd, miri_cube_pars, miri_image, tmp_path, as_filen
     # the image needs to be a full image and this take too much time
     # in a unit test
 
-    # Test ErrorNoAssignWCS is raised
-    with pytest.raises(ErrorNoAssignWCS):
+    # Test NoAssignWCSError is raised
+    with pytest.raises(NoAssignWCSError):
         step = CubeBuildStep()
         step.override_cubepar = miri_cube_pars
         step.channel = '3'
         step.run(step_input)
 
     # Test some defaults to step are setup correctly and
-    # is user specifies channel is set up correctly
+    # if user specifies channel it is set up correctly
     step = CubeBuildStep()
     step.override_cubepar = miri_cube_pars
     step.channel = '1'
 
     try:
         step.run(step_input)
-    except ErrorNoAssignWCS:
+    except NoAssignWCSError:
         pass
 
     assert step.pars_input['channel'] == ['1']
@@ -144,7 +146,7 @@ def test_call_cube_build(tmp_cwd, miri_cube_pars, miri_image, tmp_path, as_filen
     # save file with modifications
     if as_filename:
         miri_image.save(step_input)
-    with pytest.raises(ErrorNoChannels):
+    with pytest.raises(NoChannelsError):
         step = CubeBuildStep()
         step.override_cubepar = miri_cube_pars
         step.channel = '3'
@@ -158,7 +160,7 @@ def nirspec_data():
     image.meta.instrument.name = 'NIRSPEC'
     image.meta.instrument.detector = 'NRS1'
     image.meta.exposure.type = 'NRS_IFU'
-    image.meta.filename = 'test_nirspec.fits'
+    image.meta.filename = 'test_nirspec_cal.fits'
     image.meta.observation.date = '2023-10-06'
     image.meta.observation.time = '00:00:00.000'
     # below values taken from regtest using file
@@ -176,13 +178,14 @@ def nirspec_data():
         refs[reftype] = step.get_reference_file(image, reftype)
     pipe = assign_wcs.nirspec.create_pipeline(image, refs, slit_y_range=[-.5, .5])
     image.meta.wcs = WCS(pipe)
+    image.meta.wcs.bounding_box = assign_wcs.nirspec.generate_compound_bbox(image)
     return image
 
 
 @pytest.mark.parametrize("as_filename", [True, False])
 def test_call_cube_build_nirspec(tmp_cwd, nirspec_data, tmp_path, as_filename):
     if as_filename:
-        fn = tmp_path / 'test_nirspec.fits'
+        fn = tmp_path / 'test_nirspec_cal.fits'
         nirspec_data.save(fn)
         step_input = fn
     else:
@@ -190,4 +193,35 @@ def test_call_cube_build_nirspec(tmp_cwd, nirspec_data, tmp_path, as_filename):
     step = CubeBuildStep()
     step.channel = '1'
     step.coord_system = 'internal_cal'
-    step.run(step_input)
+    step.save_results = True
+    result = step.run(step_input)
+
+    assert isinstance(result, ModelContainer)
+    assert len(result) == 1
+    model = result[0]
+    assert model.meta.cal_step.cube_build == 'COMPLETE'
+    assert model.meta.filename == 'test_nirspec_g395h-f290lp_internal_s3d.fits'
+    assert os.path.isfile(model.meta.filename)
+
+
+@pytest.mark.parametrize("as_filename", [True, False])
+def test_call_cube_build_nirspec_multi(tmp_cwd, nirspec_data, tmp_path, as_filename):
+    if as_filename:
+        fn = tmp_path / 'test_nirspec_cal.fits'
+        nirspec_data.save(fn)
+        step_input = fn
+    else:
+        step_input = nirspec_data
+    step = CubeBuildStep()
+    step.channel = '1'
+    step.coord_system = 'internal_cal'
+    step.save_results = True
+    step.output_type = 'multi'
+    result = step.run(step_input)
+
+    assert isinstance(result, ModelContainer)
+    assert len(result) == 1
+    model = result[0]
+    assert model.meta.cal_step.cube_build == 'COMPLETE'
+    assert model.meta.filename == 'test_nirspec_s3d.fits'
+

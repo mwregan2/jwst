@@ -12,12 +12,17 @@ midpoint of each integration and the photometry values.
 Assumptions
 -----------
 This step is intended to be used for aperture photometry with time-series
-exposures.  Only direct images should be used, not spectra.
+imaging exposures.  Only direct images should be used, not spectra.
 
 The target is assumed to have been placed at the aperture reference location,
 which is stored in the XREF_SCI and YREF_SCI FITS keywords
 (note that these are 1-indexed values). Hence the step uses those keyword
 values as the target location within the image.
+
+The input is usually assumed to be flux calibrated in units of MJy/sr, in which
+case the output will be in Jy. If the flux calibration step was skipped, it
+will convert from DN/s to the number of flatfielded electrons measured per
+integration.
 
 Algorithm
 ---------
@@ -30,6 +35,18 @@ listed in the output table from this step will be extracted from column
 the times will be computed from the exposure start time, the integration time,
 and the number of integrations.  In either case, the times are
 Modified Julian Date, time scale UTC.
+
+If NaNs exist in the source or background annulus, they are masked out and the value
+returned is the sum over the real-valued data.
+This is different from the convention for photometry in standard imaging mode:
+in that case, a NaN value is returned if it is present in any of the pixels in
+the source aperture. In the imaging case, the mostly likely cause of NaN pixels
+in the aperture is NaN-valued central pixels for a saturated source in an image
+with many sources. For TSO data, it is more likely that  single pixels are affected
+in a given integration and science analysis will be focused on variability of one source.
+If NaNs are present, the absolute flux will be underestimated, but the relative values may still
+be useful.
+
 
 The output table contains these fields:
 

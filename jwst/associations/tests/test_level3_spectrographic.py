@@ -1,15 +1,15 @@
 """test_level3_dithers: Test of spectrographic rules."""
-import pytest
 import re
+
+import pytest
+from astropy.utils.data import get_pkg_data_filename
 
 from jwst.associations.tests.helpers import (
     BasePoolRule,
     PoolParams,
     combine_pools,
-    registry_level3_only,
-    t_path
+    registry_level3_only
 )
-
 from jwst.associations import generate
 from jwst.associations.lib.utilities import constrain_on_candidates
 
@@ -17,22 +17,30 @@ from jwst.associations.lib.utilities import constrain_on_candidates
 class TestLevel3Spec(BasePoolRule):
     pools = [
         PoolParams(
-            path=t_path('data/pool_005_spec_niriss.csv'),
+            path=get_pkg_data_filename(
+                "data/pool_005_spec_niriss.csv",
+                package="jwst.associations.tests"),
             n_asns=0,
             n_orphaned=0
         ),
         PoolParams(
-            path=t_path('data/pool_006_spec_nirspec.csv'),
+            path=get_pkg_data_filename(
+                "data/pool_006_spec_nirspec.csv",
+                package="jwst.associations.tests"),
             n_asns=3,
             n_orphaned=0
         ),
         PoolParams(
-            path=t_path('data/pool_007_spec_miri.csv'),
+            path=get_pkg_data_filename(
+                "data/pool_007_spec_miri.csv",
+                package="jwst.associations.tests"),
             n_asns=1,
             n_orphaned=0
         ),
         PoolParams(
-            path=t_path('data/pool_019_niriss_wfss.csv'),
+            path=get_pkg_data_filename(
+                "data/pool_019_niriss_wfss.csv",
+                package="jwst.associations.tests"),
             n_asns=3,
             n_orphaned=0
         ),
@@ -56,7 +64,7 @@ def nirspec_params_id(fixture_value):
             'o001',
             'spec3',
             r'jw99009-o001_spec3_\d{5}_asn',
-            'jw99009-o001_{source_id}_nirspec_f100lp-g140m-{slit_name}-s200a2',
+            'jw99009-o001_t001-{source_id}_nirspec_f100lp-g140m-{slit_name}-s200a2',
             set(('science', 'target_acquisition', 'autowave'))
         ),
         (
@@ -77,7 +85,8 @@ def nirspec_params_id(fixture_value):
 )
 def nirspec_params(request):
     cid, asn_type, asn_name, product_name, exptypes = request.param
-    pool = combine_pools(t_path('data/pool_006_spec_nirspec.csv'))
+    pool = combine_pools(get_pkg_data_filename(
+        "data/pool_006_spec_nirspec.csv", package="jwst.associations.tests"))
     gc = constrain_on_candidates((cid,))
     rules = registry_level3_only(global_constraints=gc)
     asns = generate(pool, rules)
@@ -119,7 +128,8 @@ def test_nirspec_modes(nirspec_params):
 )
 def miri_params(request):
     cid, asn_type, asn_name, product_name = request.param
-    pool = combine_pools(t_path('data/pool_007_spec_miri.csv'))
+    pool = combine_pools(get_pkg_data_filename(
+        "data/pool_007_spec_miri.csv", package="jwst.associations.tests"))
     gc = constrain_on_candidates((cid,))
     rules = registry_level3_only(global_constraints=gc)
     asns = generate(pool, rules)

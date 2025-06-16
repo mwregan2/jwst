@@ -16,6 +16,7 @@ Package Index
    badpix_selfcal/index.rst
    barshadow/index.rst
    charge_migration/index.rst
+   clean_flicker_noise/index.rst
    combine_1d/index.rst
    cube_build/index.rst
    dark_current/index.rst
@@ -24,7 +25,6 @@ Package Index
    exp_to_source/index.rst
    extract_1d/index.rst
    extract_2d/index.rst
-   fits_generator/index.rst
    firstframe/index.rst
    flatfield/index.rst
    fringe/index.rst
@@ -54,6 +54,7 @@ Package Index
    references_general/index.rst
    refpix/index.rst
    resample/index.rst
+   resample_spec/index.rst
    reset/index.rst
    residual_fringe/index.rst
    rscd/index.rst
