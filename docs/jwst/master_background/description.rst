@@ -17,7 +17,7 @@ versus wavelength - is projected into the
 2-D space of source data based on the wavelength of each pixel in the 2-D data. The resulting
 2-D background signal is then subtracted directly from the 2-D source data.
 
-Logic built into the step checks to see if the exposure-based :ref:`background <background_step>`
+Logic built into the step checks to see if the exposure-based :ref:`background <background_subtraction>`
 subtraction step in the :ref:`calwebb_spec2 <calwebb_spec2>` pipeline has already been
 performed on the input images, based on the value of the S_BKDSUB keyword. If S_BKGSUB is
 set to "COMPLETE", the master background step is skipped. If the :ref:`calwebb_spec2 <calwebb_spec2>`
@@ -376,7 +376,8 @@ as follows:
    extended sources (appropriate for background signal), and saving the extended
    source correction arrays for each slit in an internal copy of the data model
 #. If a user-supplied master background spectrum is **not** given, the
-   :ref:`resample_spec <resample_step>` and :ref:`extract_1d <extract_1d_step>`
+   :ref:`pixel_replace <pixel_replace_step>`,
+   :ref:`resample_spec <resample_spec_step>` and :ref:`extract_1d <extract_1d_step>`
    steps are applied to the calibrated background slits, resulting
    in extracted 1D background spectra
 #. The 1D background spectra are combined, using the

@@ -1,11 +1,15 @@
+import warnings
+
 import numpy as np
 
+WFSS_EXPTYPES = ["NIS_WFSS", "NRC_WFSS", "NRC_GRISM", "NRC_TSGRISM"]
 
-WFSS_EXPTYPES = ['NIS_WFSS', 'NRC_WFSS', 'NRC_GRISM', 'NRC_TSGRISM']
+__all__ = ["get_wavelengths"]
 
 
 def get_wavelengths(model, exp_type="", order=None, use_wavecorr=None):
-    """Read or compute wavelengths.
+    """
+    Read or compute wavelengths.
 
     Parameters
     ----------
@@ -22,22 +26,31 @@ def get_wavelengths(model, exp_type="", order=None, use_wavecorr=None):
 
     use_wavecorr : bool
         Use the corrected wavelengths in the wavelength attribute or
-        recompute uncorrected wavelengths from the WCS?
+        recompute uncorrected wavelengths from the WCS.
 
     Returns
     -------
     wl_array : 2-D ndarray
-        An array of wavelengths corresponding to the data in `model`.
+        An array of wavelengths corresponding to the data in ``model``.
     """
-
     # Use the existing wavelength array, if there is one
     if hasattr(model, "wavelength"):
         wl_array = model.wavelength.copy()
-        got_wavelength = True                   # may be reset below
+        got_wavelength = True  # may be reset below
     else:
         wl_array = None
-    if (wl_array is None or len(wl_array) == 0 or np.nanmin(wl_array) == 0.
-            and np.nanmax(wl_array) == 0.):
+
+    # Check for a present but empty wavelength array
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="All-NaN slice", category=RuntimeWarning)
+        empty_wl = (
+            wl_array is None
+            or len(wl_array) == 0
+            or np.nanmin(wl_array) == 0.0
+            and np.nanmax(wl_array) == 0.0
+        )
+
+    if empty_wl:
         got_wavelength = False
         wl_array = None
 
@@ -45,16 +58,19 @@ def get_wavelengths(model, exp_type="", order=None, use_wavecorr=None):
     # resulting wavelength values
     shape = model.data.shape
     grid = np.indices(shape[-2:], dtype=np.float64)
-    
+
     # If we've been asked to use the uncorrected wavelengths we need to
     # recalculate them from the wcs by skipping the transformation between
     # the slit frame and the wavelength corrected slit frame.  If the wavecorr_frame
     # is not in the wcs assume that the wavelength correction has not been applied.
     if use_wavecorr is not None:
-        if (not use_wavecorr and hasattr(model.meta, "wcs")
-                and 'wavecorr_frame' in model.meta.wcs.available_frames):
+        if (
+            not use_wavecorr
+            and hasattr(model.meta, "wcs")
+            and "wavecorr_frame" in model.meta.wcs.available_frames
+        ):
             wcs = model.meta.wcs
-            detector2slit = wcs.get_transform('detector', 'slit_frame')
+            detector2slit = wcs.get_transform("detector", "slit_frame")
             wavecorr2world = wcs.get_transform("wavecorr_frame", "world")
             wl_array = (detector2slit | wavecorr2world)(grid[1], grid[0])[2]
             return wl_array

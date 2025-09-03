@@ -8,13 +8,18 @@ The ``align_refs`` step is one of the coronagraphic-specific steps in the ``coro
 sub-package that is part of Stage 3 :ref:`calwebb_coron3 <calwebb_coron3>` processing.
 It computes offsets between science target
 images and reference PSF images, and shifts the PSF images into
-alignment. This is performed on a per-integration basis for both the science target
-data and the reference PSF data. Each integration contained in the stacked PSF data
+alignment. The alignment shifts are computed from the first integration and applied to all the
+subsequent ones for both the science target data and the reference PSF data.
+Each integration contained in the stacked PSF data
 (the result of the :ref:`stack_refs <stack_refs_step>`) step is
-aligned to each integration within a given science target exposure.
+aligned to the first integration within a given science target exposure.
 This results in a new product for each science target exposure that contains a stack
-of individual PSF images that have been aligned to each integration in the science
+of individual PSF images that have been aligned to the first integration in the science
 target exposure.
+
+Note that aligning to the first science integration is sufficient because flight data
+shows that there are minimal drifts during an observation in line-of-sight pointing, or in PSF
+properties.
 
 Shifts between each PSF and target image are computed using the
 ``scipy.optimize.leastsq`` function. A 2D mask, supplied via a PSFMASK reference file, 
@@ -70,15 +75,14 @@ contains the collection of all PSF images to be used, in the form of a 3D image 
 Outputs
 -------
 
-4D aligned PSF images
+3D aligned PSF images
 ^^^^^^^^^^^^^^^^^^^^^
-:Data model: `~jwst.datamodels.QuadModel`
+:Data model: `~jwst.datamodels.CubeModel`
 :File suffix: _psfalign
 
-The output is a 4D data model, where the 3rd axis has length equal to the total number of
-reference PSF images in the input PSF stack and the 4th axis has length equal to the number
-of integrations in the input science target product (ncols x nrows x npsfs x nints).
-Image[n,m] in the 4D data is the n :sup:`th` PSF image aligned to the m :sup:`th` science
+The output is a CubeModel, where the 0th axis has length equal to the total number of
+integrations (nints x ncols x nrows).
+Each Image[n] in the 3D data is the n :sup:`th` PSF image aligned to the first science
 target integration. The file name is exposure-based, using the input science target exposure
 name as the root, with the addition of the association candidate ID and the "_psfalign"
 product type suffix, e.g. "jw8607342001_02102_00001_nrcb3_a3001_psfalign.fits."

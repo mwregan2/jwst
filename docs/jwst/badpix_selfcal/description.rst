@@ -19,7 +19,7 @@ in the :ref:`calwebb_spec2 <calwebb_spec2>` pipeline.
 Input details
 -------------
 The input data must be in the form of a `~jwst.datamodels.IFUImageModel` or
-a `~jwst.datamodels.ModelContainer` containing exactly one
+a `~jwst.datamodels.container.ModelContainer` containing exactly one
 science exposure and any number of additional exposures.
 A fits or association file 
 that can be read into one of these data models is also acceptable.
@@ -38,6 +38,9 @@ the spectral axis. The algorithm proceeds as follows:
   If no additional exposures are available, the science data itself is passed in 
   without modification, serving as the "background image" for the rest of the procedure, 
   i.e., true self-calibration.
+* For MIRI MRS, any residual pedestal in the effective dark current is subtracted from
+  each exposure using the unilluminated region of the detector between spectral channels
+  prior to performing the pixelwise minimum combination.
 * The combined background image is median-filtered, ignoring NaNs, along the spectral axis 
   with a user-specified kernel size. The default kernel size is 15 pixels.
 * The difference between the original background image and the median-filtered background image

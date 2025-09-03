@@ -1,22 +1,29 @@
 from __future__ import annotations
-import numpy as np
-import jwst.datamodels as dm
-from jwst.outlier_detection.outlier_detection_ifu import medfilt
-from stdatamodels.jwst.datamodels.dqflags import pixel
+
 import warnings
 
+import numpy as np
+from stcal.outlier_detection.utils import medfilt
+from stdatamodels.jwst.datamodels.dqflags import pixel
 
-def badpix_selfcal(minimg: np.ndarray,
-                   flagfrac_lower: float = 0.001,
-                   flagfrac_upper: float = 0.001,
-                   kernel_size: int = 15,
-                   dispaxis=None) -> np.ndarray:
+from jwst.datamodels import IFUImageModel  # type: ignore[attr-defined]
+
+__all__ = ["badpix_selfcal", "apply_flags"]
+
+
+def badpix_selfcal(
+    minimg: np.ndarray,
+    flagfrac_lower: float = 0.001,
+    flagfrac_upper: float = 0.001,
+    kernel_size: int = 15,
+    dispaxis=None,
+) -> np.ndarray:
     """
-    Flag residual artifacts as bad pixels in the DQ array of a JWST exposure
+    Flag residual artifacts as bad pixels in the DQ array of a JWST exposure.
 
     Parameters
     ----------
-    minimg : np.ndarray
+    minimg : ndarray
         Selfcal data of shape (x, y), i.e., after some operation has
         already been taken to combine multiple exposures,
         typically a MIN operation.
@@ -32,7 +39,7 @@ def badpix_selfcal(minimg: np.ndarray,
 
     Returns
     -------
-    flagged_indices : np.ndarray
+    flagged_indices : ndarray
         Indices of the flagged pixels,
         shaped like output from np.where
     """
@@ -54,32 +61,34 @@ def badpix_selfcal(minimg: np.ndarray,
     minimg_hpf = minimg - smoothed
 
     # Flag outliers using percentile cutoff
-    flag_low, flag_high = np.nanpercentile(minimg_hpf, [flagfrac_lower * 100, (1 - flagfrac_upper) * 100])
+    flag_low, flag_high = np.nanpercentile(
+        minimg_hpf, [flagfrac_lower * 100, (1 - flagfrac_upper) * 100]
+    )
     bad = (minimg_hpf > flag_high) | (minimg_hpf < flag_low)
     flagged_indices = np.where(bad)
-
     return flagged_indices
 
 
-def apply_flags(input_model: dm.IFUImageModel, flagged_indices: np.ndarray) -> dm.IFUImageModel:
+def apply_flags(input_model: IFUImageModel, flagged_indices: np.ndarray) -> IFUImageModel:
     """
-    Apply the flagged indices to the input model. Sets the flagged pixels to NaN
+    Apply the flagged indices to the input model.
+
+    Sets the flagged pixels to NaN
     and the DQ flag to DO_NOT_USE + OTHER_BAD_PIXEL
 
     Parameters
     ----------
-    input_model : dm.IFUImageModel
+    input_model : IFUImageModel
         Input science data to be corrected
-    flagged_indices : np.ndarray
+    flagged_indices : ndarray
         Indices of the flagged pixels,
         shaped like output from np.where
 
     Returns
     -------
-    output_model : dm.IFUImageModel
+    output_model : IFUImageModel
         Flagged data model
     """
-
     input_model.dq[flagged_indices] |= pixel["DO_NOT_USE"] + pixel["OTHER_BAD_PIXEL"]
 
     input_model.data[flagged_indices] = np.nan

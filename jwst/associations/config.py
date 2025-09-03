@@ -1,4 +1,4 @@
-"""Global configuration parameters"""
+"""Global configuration parameters."""
 
 # Debug mode
 #    In conjunction with logging, this mode changes the behavior
@@ -6,3 +6,5 @@
 #    removed, they are no longer removed. This assists in determining
 #    why they were an issue.
 DEBUG = False
+
+__all__ = ["DEBUG"]

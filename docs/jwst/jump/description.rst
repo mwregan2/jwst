@@ -27,6 +27,12 @@ Note that the core algorithms for this step are called from the external package
 ``stcal``, an STScI effort to unify common calibration processing algorithms
 for use by multiple observatories.
 
+The keywords ``PRIMECRS`` and ``EXTNCRS`` are set in this step.  The ``PRIMECRS`` keyword
+is the number of primary cosmic rays found per thousand pixels per second.  The ``EXTNCRS``
+keyword is the number of extended events (snowball and shower) per million pixels per
+second.
+
+
 :ref:`Algorithm <stcal:jump_algorithm>`
 ---------------------------------------
 
@@ -49,7 +55,8 @@ detectors are almost always circles with a central region that is saturated.
 The saturated core allows the search for smaller events without false positives.
 The mid-IR (MIRI) detectors do not, in general, have a saturated center and are only rarely circular.
 Thus, we fit the minimum enclosing ellipse and do not require that there are saturated pixels
-within the ellipse.
+within the ellipse.  Likewise, MIRI showers are only flagged when detected features are consistent
+with the maximum known amplitude (in DN/s) of shower artifacts.
 
 Multiprocessing
 ---------------

@@ -60,7 +60,7 @@ The FITS file structure is as follows.
 
 This FITS file structure is the result of serializing a `~jwst.datamodels.Level1bModel`, but
 can also be read into a `~jwst.datamodels.RampModel`, in which case zero-filled
-ERR, GROUPDQ, and PIXELDQ data arrays will be created and stored in the model, having array
+GROUPDQ and PIXELDQ data arrays will be created and stored in the model, having array
 dimensions based on the shape of the SCI array (see `~jwst.datamodels.RampModel`).
 
 .. _ramp:
@@ -72,7 +72,7 @@ they are stored internally in a `~jwst.datamodels.RampModel`.
 This type of data model is serialized to a ``ramp`` type FITS
 file on disk. The original detector pixel values (in the SCI extension) are converted
 from integer to floating-point data type. The same is true for the ZEROFRAME and REFOUT
-data extensions, if they are present. An ERR array and two types of data quality arrays are
+data extensions, if they are present. Two types of data quality arrays are
 also added to the product. The FITS file layout is as follows:
 
 +-----+------------+----------+-----------+-----------------------------------+
@@ -85,8 +85,6 @@ also added to the product. The FITS file layout is as follows:
 |  2  | PIXELDQ    | IMAGE    | uint32    | ncols x nrows                     |
 +-----+------------+----------+-----------+-----------------------------------+
 |  3  | GROUPDQ    | IMAGE    | uint8     | ncols x nrows x ngroups x nints   |
-+-----+------------+----------+-----------+-----------------------------------+
-|  4  | ERR        | IMAGE    | float32   | ncols x nrows x ngroups x nints   |
 +-----+------------+----------+-----------+-----------------------------------+
 |     | ZEROFRAME* | IMAGE    | float32   | ncols x nrows x nints             |
 +-----+------------+----------+-----------+-----------------------------------+
@@ -107,7 +105,6 @@ also added to the product. The FITS file layout is as follows:
    for a given pixel (e.g. a hot pixel is hot in all groups and integrations).
  - GROUPDQ: 4-D data array containing DQ flags that pertain to individual groups within individual
    integrations, such as the point at which a pixel becomes saturated within a given integration.
- - ERR: 4-D data array containing uncertainty estimates on a per-group and per-integration basis.
  - ZEROFRAME: 3-D data array containing the pixel values of the zero-frame for each
    integration in the exposure, where each plane of the cube corresponds to a given integration.
    Only appears if the zero-frame data were requested to be downlinked separately.
@@ -116,7 +113,7 @@ also added to the product. The FITS file layout is as follows:
    exposure.
  - REFOUT: The MIRI detector reference output values. Only appears in MIRI exposures.
  - ADSF: The data model meta data.
- 
+
 .. _rate:
 .. _rateints:
 
@@ -217,7 +214,7 @@ The :ref:`calwebb_image2 <calwebb_image2>` and :ref:`calwebb_spec2 <calwebb_spec
 pipelines have the capability to perform background subtraction on countrate data.
 In its simplest form, this consists of subtracting background exposures or a
 CRDS background reference image from science images. This operation is performed by
-the :ref:`background <background_step>` step in the stage 2 pipelines. If the pipeline
+the :ref:`background <background_subtraction>` step in the stage 2 pipelines. If the pipeline
 parameter ``save_bsub`` is set to ``True``, the result of the background subtraction
 step will be saved to a file. Because this is a direct image-from-image operation, the
 form of the result is identical to input. If the input is a ``rate`` product, the
@@ -368,7 +365,8 @@ which has the same structure and content as the calints_ product described above
 
 Resampled 2-D data: ``i2d`` and ``s2d``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Images and spectra that have been resampled by the :ref:`resample <resample_step>` step use a
+Images and spectra that have been resampled by the :ref:`resample <resample_step>`
+or :ref:`resample_spec <resample_spec_step>` steps use a
 different set of data arrays than other science products. Resampled 2-D images are stored in
 ``i2d`` products and resampled 2-D spectra are stored in ``s2d`` products.
 The FITS file structure for ``i2d`` and ``s2d`` products is as follows:
@@ -505,18 +503,21 @@ in binary table extensions of FITS files. The overall layout of the FITS file is
 |  2  | ASDF        | BINTABLE | N/A       | variable      |
 +-----+-------------+----------+-----------+---------------+
 
- - EXTRACT1D: A 2-D table containing the extracted spectral data.
+ - EXTRACT1D: A table containing the extracted spectral data.
  - ADSF: The data model meta data.
 
-Multiple "EXTRACT1D" extensions can be present if there is data for more than one source or
-if the file is an ``x1dints`` product. For ``x1dints`` products, there is one "EXTRACT1D"
-extension for each integration in the exposure.
+Multiple "EXTRACT1D" extensions can be present if there is data for more than one source,
+segment, spectral order, or exposure. For ``x1dints`` products, there is one "EXTRACT1D"
+extension that holds spectra for all integrations in the exposure.
 
-The structure of the "EXTRACT1D" table extension is as follows:
+For ``x1d`` products, the table is constructed using a simple 2-D layout,
+using one row per extracted spectral element in the dispersion direction of the data
+(i.e. one row per wavelength bin). The structure of the "EXTRACT1D" table extension
+is as follows:
 
 +-------------------+-----------+--------------------+---------------+
 | Column Name       | Data Type | Contents           | Units         |
-+===================+===========+===================+================+
++===================+===========+====================+===============+
 | WAVELENGTH        | float64   | Wavelength values  | :math:`\mu` m |
 +-------------------+-----------+--------------------+---------------+
 | FLUX              | float64   | Flux values        | Jy            |
@@ -554,8 +555,90 @@ The structure of the "EXTRACT1D" table extension is as follows:
 | NPIXELS           | float64   | Number of pixels   | N/A           |
 +-------------------+-----------+--------------------+---------------+
 
-The table is constructed using a simple 2-D layout, using one row per extracted spectral
-element in the dispersion direction of the data (i.e. one row per wavelength bin).
+For MIRI MRS ``x1d`` products, there are three additional
+columns in the output table:  RF_FLUX, RF_SURF_BRIGHT, and RF_BACKGROUND.
+These contain the FLUX, SURF_BRIGHT, and BACKGROUND data, with additional
+corrections for residual fringing (see :ref:`MIRI-MRS-1D-residual-fringe`
+for more information).
+
+For NIRCam and NIRISS WFSS ``x1d`` products, each row in the table holds the full
+spectrum for a single source, such that all extracted sources are present in the
+same binary table. The spectral data columns listed above are each 2-D: each row is a 1-D
+vector containing all data points for the spectrum in that integration.
+The table also reports several pieces of source-specific metadata; these fields are:
+SOURCE_ID, N_ALONGDISP, SOURCE_TYPE, SOURCE_XPOS, SOURCE_YPOS, SOURCE_RA, SOURCE_DEC,
+EXTRACT2D_XSTART, EXTRACT2D_YSTART, SPECTRAL_ORDER.
+Each extension in the hdulist represents a different exposure and/or spectral order,
+with the extension metadata indicating the exposure number, spectral order, and
+input filename for the corresponding exposure.
+See the :ref:`extract_1d <extract_1d_step>` step documentation for more details.
+
+For ``x1dints`` products, each row in the table holds the full spectrum for a single
+integration.  The spectral data columns listed above are each 2-D: each row is a 1-D
+vector containing all data points for the spectrum in that integration.
+The spectral tables for this model have extra 1D columns to contain the metadata for
+the spectrum in each row.  The structure of the "EXTRACT1D" table extension for
+``x1dints`` products is as follows:
+
++-------------------+-----------+------------------------+---------------+-----------+
+| Column Name       | Data Type | Contents               | Units         | Dimension |
++===================+===========+========================+===============+===========+
+| INT_NUM           | int32     | Integration number     | N/A           |    1D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| WAVELENGTH        | float64   | Wavelength values      | :math:`\mu` m |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| FLUX              | float64   | Flux values            | Jy            |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| FLUX_ERROR        | float64   | Error values           | Jy            |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| FLUX_VAR_POISSON  | float64   | Error values           | Jy^2          |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| FLUX_VAR_RNOISE   | float64   | Error values           | Jy^2          |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| FLUX_VAR_FLAT     | float64   | Error values           | Jy^2          |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| SURF_BRIGHT       | float64   | Surface Brightness     | MJy/sr        |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| SB_ERROR          | float64   | Surf. Brt. errors      | MJy/sr        |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| SB_VAR_POISSON    | float64   | Surf. Brt. errors      | (MJy/sr)^2    |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| SB_VAR_RNOISE     | float64   | Surf. Brt. errors      | (MJy/sr)^2    |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| SB_VAR_FLAT       | float64   | Surf. Brt. errors      | (MJy/sr)^2    |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| DQ                | uint32    | DQ flags               | N/A           |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| BACKGROUND        | float64   | Background signal      | MJy/sr        |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| BKGD_ERROR        | float64   | Background error       | MJy/sr        |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| BKGD_VAR_POISSON  | float64   | Background error       | (MJy/sr)^2    |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| BKGD_VAR_RNOISE   | float64   | Background error       | (MJy/sr)^2    |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| BKGD_VAR_FLAT     | float64   | Background error       | (MJy/sr)^2    |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| NPIXELS           | float64   | Number of pixels       | N/A           |    2D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| N_ALONGDISP       | int32     | Nbr. spectral elements | N/A           |    1D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| SEGMENT           | int32     | Segment number         | N/A           |    1D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| MJD-BEG           | float64   | Start time (MJD UTC)   | d             |    1D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| MJD-AVG           | float64   | Mid time (MJD UTC)     | d             |    1D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| MJD-END           | float64   | End time (MJD UTC)     | d             |    1D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| TDB-BEG           | float64   | Start time (BJD TDB)   | d             |    1D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| TDB-MID           | float64   | Mid time (BJD TDB)     | d             |    1D     |
++-------------------+-----------+------------------------+---------------+-----------+
+| TDB-END           | float64   | End time (BJD TDB)     | d             |    1D     |
++-------------------+-----------+------------------------+---------------+-----------+
+
+
 Note that for point sources observed with NIRSpec or NIRISS SOSS mode, it is not
 possible to express the extracted spectrum as surface brightness and hence the
 SURF_BRIGHT and SB_ERROR columns will be set to zero. NPIXELS gives the (fractional)
@@ -613,7 +696,7 @@ Source catalog: ``cat``
 The :ref:`source_catalog <source_catalog_step>` step contained in the
 :ref:`calwebb_image3 <calwebb_image3>` pipeline detects and quantifies sources within imaging
 products. The derived data for the sources is stored in a ``cat`` product, which is in the form
-of an ASCII table in `ECSV <http://docs.astropy.org/en/stable/_modules/astropy/io/ascii/ecsv.html>`_
+of an ASCII table in :ref:`ECSV <astropy:ecsv_format>`
 (Enhanced Character Separated Values) format. It is a flat text file, containing meta data
 header entries and the source data in a 2-D table layout, with one row per source.
 
@@ -640,7 +723,7 @@ The :ref:`tso_photometry <tso_photometry_step>` step in the :ref:`calwebb_tso3 <
 pipeline produces light curve from TSO imaging observations by computing aperture photometry as a
 function of integration time stamp within one or more exposures. The resulting photometric data
 are stored in a ``phot`` product, which is in the form of an ASCII table in
-`ECSV <http://docs.astropy.org/en/stable/_modules/astropy/io/ascii/ecsv.html>`_
+:ref:`ECSV <astropy:ecsv_format>`
 (Enhanced Character Separated Values) format. It is a flat text file, containing meta data
 header entries and the photometric data in a 2-D table layout, with one row per exposure
 integration.
@@ -654,7 +737,7 @@ pipeline produces a light curve from TSO spectroscopic observations by computing
 wavelength-integrated spectral flux as a function of integration time stamp within one or more
 exposures. The resulting photometric timeseries data
 are stored in a ``whtlt`` product, which is in the form of an ASCII table in
-`ECSV <http://docs.astropy.org/en/stable/_modules/astropy/io/ascii/ecsv.html>`_
+:ref:`ECSV <astropy:ecsv_format>`
 (Enhanced Character Separated Values) format. It is a flat text file, containing meta data
 header entries and the white-light flux data in a 2-D table layout, with one row per exposure
 integration.
@@ -778,21 +861,21 @@ and are encapsulated within a `~jwst.datamodels.AmiOIModel` data model.
 There are two additional outputs of the :ref:`ami_analyze <ami_analyze_step>` intended
 to enable a more detailed look at the data. The ``amimulti-oi`` file contains per-integration
 interferometric observables and is also a contained in a `~jwst.datamodels.AmiOIModel`,
-while the ``amilg`` product is a primarily image-based FITS file containing the 
+while the ``amilg`` product is a primarily image-based FITS file containing the
 cropped data, model, and residuals as well as the best-fit model parameters. It
 is contained in a `~jwst.datamodels.AmiLgFitModel` data model.
 
 The :ref:`ami_normalize <ami_normalize_step>` step produces an ``aminorm-oi`` product,
-which is also contained in a `~jwst.datamodels.AmiOIModel`. The model conforms to the standard 
+which is also contained in a `~jwst.datamodels.AmiOIModel`. The model conforms to the standard
 defined in `OIFITS2 standard <https://doi.org/10.1051/0004-6361/201526405>`_.
 
-In the per-integration ``amimulti-oi`` products the "OI_ARRAY", "OI_T3", "OI_VIS", 
-and "OI_VIS2" extensions each contain 2D data columns whose second dimension equals 
+In the per-integration ``amimulti-oi`` products the "OI_ARRAY", "OI_T3", "OI_VIS",
+and "OI_VIS2" extensions each contain 2D data columns whose second dimension equals
 the number of integrations. In the averaged ``ami-oi`` product and normalized ``aminorm-oi``
-products, these columns have a single dimension whose length is independent of the number 
+products, these columns have a single dimension whose length is independent of the number
 of integrations.
 
-The overall structure of the OIFITS files (``ami-oi``, ``amimulti-oi``, and 
+The overall structure of the OIFITS files (``ami-oi``, ``amimulti-oi``, and
 ``aminorm-oi`` products) is as follows:
 
 +-----+--------------+----------+-----------+------------------+

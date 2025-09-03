@@ -8,6 +8,10 @@
    :width: 400
    :align: center
 
+
+**Version**: |release|
+
+
 Welcome to the documentation for `jwst`. This package contains the Python
 software suite for the James Webb Space Telescope (JWST) calibration pipeline,
 which processes data from all JWST instruments by applying various corrections to
@@ -18,9 +22,15 @@ pipeline to custom process their JWST data. Additionally, the `jwst` package
 contains the interface to JWST datamodels, the recommended method of reading and
 writing JWST data files in Python.
 
-
 If you have questions or concerns regarding the software, please contact the JWST Help
 desk at `JWST Help Desk <https://jwsthelp.stsci.edu>`_.
+
+Additional user-focused documentation on the
+`JWST science calibration pipeline <https://jwst-docs.stsci.edu/jwst-science-calibration-pipeline>`__
+and the
+`latest build information <https://jwst-docs.stsci.edu/jwst-science-calibration-pipeline/jwst-operations-pipeline-build-information>`__
+is also available on `JDox <https://jwst-docs.stsci.edu>`__.
+
 
 --------------------------------
 
@@ -38,6 +48,7 @@ desk at `JWST Help Desk <https://jwsthelp.stsci.edu>`_.
    :maxdepth: 2
    :caption: User Documentation
 
+   jwst/user_documentation/background_subtraction_methods/index.rst
    jwst/user_documentation/introduction.rst
    jwst/user_documentation/reference_files_crds.rst
    jwst/user_documentation/parameters.rst
@@ -45,9 +56,9 @@ desk at `JWST Help Desk <https://jwsthelp.stsci.edu>`_.
    jwst/user_documentation/running_pipeline_command_line.rst
    jwst/user_documentation/available_pipelines.rst
    jwst/user_documentation/input_output_file_conventions.rst
-   jwst/user_documentation/logging_configuration.rst
+   jwst/user_documentation/logging.rst
    jwst/user_documentation/datamodels.rst
-   jwst/user_documentation/pub_deprecation.rst
+   jwst/user_documentation/more_information.rst
 
 .. toctree::
    :maxdepth: 2
@@ -74,3 +85,4 @@ Package Documentation
    :caption: Package Documentation
 
    jwst/package_index.rst
+   jwst/changes.rst

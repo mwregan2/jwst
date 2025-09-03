@@ -1,204 +1,127 @@
 .. _outlier-detection-imaging:
 
-Default Outlier Detection Algorithm
-===================================
+Imaging Data
+============
 
 This module serves as the interface for applying ``outlier_detection`` to direct
-image observations, like those taken with MIRI, NIRCam and NIRISS.  The code implements the
-basic outlier detection algorithm used with HST data, as adapted to JWST.
+image observations, like those taken with MIRI, NIRCam, and NIRISS.
+A :ref:`Stage 3 association <asn-level3-techspecs>`,
+which is loaded into a :py:class:`~jwst.datamodels.library.ModelLibrary` object,
+serves as the basic format for all processing performed by this step.
+This routine performs the following operations:
 
-Specifically, this routine performs the following operations:
+#. Extract parameter settings for the input models and merge them with any user-provided values.
+   See :ref:`outlier detection arguments <outlier_detection_step_args>` for the full list of parameters.
 
-#. Extract parameter settings from input model and merge them with any user-provided values.
-   See :ref:`outlier detection arguments <outlier_detection_step_args>` for the full list
-   of parameters.
+#. By default, resample all input images to the same output WCS. The resample process is
+   controlled by the ``fillval``, ``pixfrac``, ``kernel``, and ``good_bits`` parameters;
+   see the :ref:`outlier detection arguments <outlier_detection_step_args>` for more information.
+   Resampling can be turned off with the ``resample_data`` parameter.
 
-#. Convert input data, as needed, to make sure it is in a format that can be processed.
-
-   * A :py:class:`~jwst.datamodels.ModelContainer` serves as the basic format for
-     all processing performed by
-     this step, as each entry will be treated as an element of a stack of images
-     to be processed to identify bad-pixels/cosmic-rays and other artifacts.
-   * If the input data is a :py:class:`~jwst.datamodels.CubeModel`, convert it into a ModelContainer.
-     This allows each plane of the cube to be treated as a separate 2D image
-     for resampling (if done) and for combining into a median image.
-
-#. By default, resample all input images.
-
-   * The resampling step starts by computing an output WCS that is large enoug
-     to encompass all the input images.
-   * All images from the *same exposure* will get resampled onto this output
-     WCS to create a mosaic of all the chips for that exposure.  This product
-     is referred to as a "grouped mosaic" since it groups all the chips from
-     the same exposure into a single image.
-   * Each dither position will result in a separate grouped mosaic, so only
-     a single exposure ever contributes to each pixel in these mosaics.
-   * An explanation of how all NIRCam multiple detector group mosaics are
+   * Compute an output WCS that is large enough to encompass all the input images.
+   * Resample all images from the *same exposure* onto this output WCS to create a mosaic of all the detectors
+     for that exposure.  This product is referred to as a "grouped mosaic" since it groups all the detectors
+     from the same exposure into a single image. Each dither position will result in
+     a separate grouped mosaic, so only a single exposure ever contributes to each pixel in these mosaics.
+     An explanation of how all NIRCam multiple detector group mosaics are
      defined from `a single exposure or from a dithered set of exposures
-     <https://jwst-docs.stsci.edu/near-infrared-camera/nircam-operations/nircam-dithers-and-mosaics>`_
+     <https://jwst-docs.stsci.edu/jwst-near-infrared-camera/nircam-operations/nircam-dithers-and-mosaics>`_
      can be found here.
-   * The ``fillval`` parameter specifies what value to use in the ouptut
-     resampled image for any pixel which has no valid contribution from any
-     input exposure.  The default value of ``INDEF`` indicates that the value
-     from the last exposure will be used, while a value of 0 would result in
-     holes.
-   * The resampling can be controlled with the ``pixfrac``, ``kernel`` and
-     ``weight_type`` parameters.
-   * The ``pixfrac`` indicates the fraction by
-     which input pixels are "shrunk" before being drizzled onto the
-     output image grid, given as a real number between 0 and 1. This specifies
-     the size of the footprint, or "dropsize", of a pixel in units of the input
-     pixel size.
-   * The ``kernel`` specifies the form of the kernel function used to distribute flux onto
-     the separate output images.
-   * The ``weight_type`` indicates the type of weighting image to apply with the bad pixel mask.
-     Available options are ``ivm`` (default) for computing and using an inverse-variance map
-     and ``exptime`` for weighting by the exposure time.
-   * The ``good_bits`` parameter specifies what DQ values from the input exposure
-     should be used when resampling to create the output mosaic.  Any pixel with a
-     DQ value not included in this value (or list of values) will be ignored when
-     resampling.
-   * Resampled images will be written out to disk with the suffix ``_<asn_id>_outlier_i2d.fits``
-     if the input model container has an <asn_id>, otherwise the suffix will be ``_outlier_i2d.fits``
-     by default.
-   * **If resampling is turned off** through the use of the ``resample_data`` parameter,
-     a copy of the unrectified input images (as a ModelContainer)
-     will be used for subsequent processing.
+   * Fill in pixels that have no valid contribution from any input exposure with the value
+     specified by the ``fillval`` parameter.
 
-#. Create a median image from all grouped observation mosaics.
+#. If the ``save_intermediate_results`` parameter is set to True, write the resampled images to disk
+   with the suffix ``_outlier_i2d.fits``. These are not saved if ``resample_data`` is set to False because
+   they would be copies of the input models.
 
-   * The median image is created by combining all grouped mosaic images or
-     non-resampled input data (as planes in a ModelContainer) pixel-by-pixel.
-   * The ``nlow`` and ``nhigh`` parameters specify how many low and high values
-     to ignore when computing the median for any given pixel.
-   * The ``maskpt`` parameter sets the percentage of the weight image values to
-     use, and any pixel with a weight below this value gets flagged as "bad" and
-     ignored when resampled.
-   * The median image is written out to disk as `_<asn_id>_median.fits` by default.
+#. If resampling is turned off, use the input data itself in place of the resampled data
+   for subsequent processing.
 
-#. By default, the median image is blotted back (inverse of resampling) to
-   match each original input image.
+#. Construct and apply a bad pixel mask to the resampled data based on the drizzled weights.
+   The ``weight_type`` parameter indicates the type of weighting image to apply with the bad pixel mask.
+   The ``maskpt`` parameter sets the threshold weight value such that any pixel
+   with a weight below this value gets flagged as bad.
 
-   * Blotted images are written out to disk as `_<asn_id>_blot.fits` by default.
-   * **If resampling is turned off**, the median image is compared directly to
-     each input image.
+#. Create a median image from all grouped observation mosaics pixel-by-pixel, i.e., averaging over groups.
+   If ``save_intermediate_results`` is set to True, the median image is written out to disk with the
+   suffix ``_median.fits``.
+
+#. Blot (inverse of resampling) the median image back to match each original input image, and write
+   the blotted images to disk with the suffix ``_blot.fits`` if ``save_intermediate_results`` is `True`.
 
 #. Perform statistical comparison between blotted image and original image to identify outliers.
 
-   * This comparison uses the original input images, the blotted
-     median image, and the derivative of the blotted image to
-     create a cosmic ray mask for each input image.
-   * The derivative of the blotted image gets created using the blotted
-     median image to compute the absolute value of the difference between each pixel and
-     its four surrounding neighbors with the largest value being the recorded derivative.
-   * These derivative images are used to flag cosmic rays
-     and other blemishes, such as satellite trails. Where the difference is larger
-     than can be explained by noise statistics, the flattening effect of taking the
-     median, or an error in the shift (the latter two effects are estimated using
-     the image derivative), the suspect pixel is masked.
-   * The ``backg`` parameter specifies a user-provided value to be used as the
-     background estimate.  This gets added to the background-subtracted
-     blotted image to attempt to match the original background levels of the
-     original input mosaic so that cosmic-rays (bad pixels) from the input
-     mosaic can be identified more easily as outliers compared to the blotted
-     mosaic.
-   * Cosmic rays are flagged using the following rule:
+   * If resampling is disabled (``resample_data == False``), compare the median image directly
+     to each input image and ignore all sub-bullets below this one.
+     In this case, compute the outlier mask using the following formula:
+
+       .. math:: | image\_input - image\_median | > SNR * input\_err
+
+   * Add a user-specified background value to the median image to match the original background levels
+     of the input mosaic. This is controlled by the ``backg`` parameter.
+   * Compute the spatial derivative of each pixel in the blotted median images by computing the absolute value
+     of the difference between each pixel and its four surrounding neighbors, recording the largest
+     absolute difference as the derivative. The derivative is multiplied by the ``scale`` parameter,
+     allowing user flexibility in determining how aggressively to flag outliers at this stage.
+   * Flag cosmic rays and other blemishes (such as satellite trails) based on the derivative image.
+     Where the difference is larger than can be explained by a combination of noise statistics,
+     the flattening effect of taking the median, and an error in the shift
+     (the latter two effects are estimated using the image derivative), the suspect pixel is considered
+     an outlier. The following rule is used:
 
      .. math:: | image\_input - image\_blotted | > scale*image\_deriv + SNR*noise
 
-   * The ``scale`` is defined as the multiplicative factor applied to the
-     derivative which is used to determine if the difference between the data
-     image and the blotted image is large enough to require masking.
-   * The ``noise`` is calculated using a combination of the detector read
-     noise and the poisson noise of the blotted median image plus the sky background.
-   * The user must specify two cut-off signal-to-noise values using the
-     ``snr`` parameter for determining whether a pixel should be masked:
-     the first for detecting the primary cosmic ray, and the second for masking
+     The noise in this equation is the value of the input model's ``err`` extension.
+     The SNR in this equation is the ``snr`` parameter, which encodes two values that
+     determine whether a pixel should be masked:
+     the first value detects the primary cosmic ray, and the second masks
      lower-level bad pixels adjacent to those found in the first pass. Since
      cosmic rays often extend across several pixels, the adjacent pixels make
      use of a slightly lower SNR threshold.
 
-#. Update input data model DQ arrays with mask of detected outliers.
+#. Update DQ arrays with flags and set SCI, ERR, and variance arrays to NaN at the location
+   of identified outliers.
 
-Memory Model for Outlier Detection Algorithm
----------------------------------------------
-The outlier detection algorithm can end up using massive amounts of memory
+Memory Saving Options
+---------------------
+The outlier detection algorithm for imaging can require a lot of memory
 depending on the number of inputs, the size of each input, and the size of the
 final output product.  Specifically,
 
-#. The input :py:class:`~jwst.datamodels.ModelContainer` or
-   :py:class:`~jwst.datamodels.CubeModel`
-   for IFU data, by default, all input exposures would have been kept open in memory to make
+#. By default, all input exposures are kept open in memory to make
    processing more efficient.
 
-#. The initial resample step creates an output product for EACH input that is the
-   same size as the final
-   output product, which for imaging modes can span all chips in the detector while
-   also accounting for all dithers.  For some Level 3 products, each resampled image can
-   be on the order of 2Gb or more.
+#. The resample step creates an output product that is the
+   same size as the final output product, which for imaging modes can span all detectors
+   while also accounting for all dithers. Although only a single resampled image is needed in
+   memory at a time, for some Level 3 products, each resampled image can be on the order of several
+   gigabytes in size.
 
-#. The median combination step then needs to have all pixels at the same position on
-   the sky in memory in order to perform the median computation.  The simplest implementation
-   for this step requires keeping all resampled outputs fully in memory at the same time.
+#. The median combination step needs to have all pixels at the same position on
+   the sky in memory in order to perform the median computation. The simplest (and fastest) implementation
+   requires keeping all resampled outputs fully in memory at the same time.
 
-Many Level 3 products only include a modest number of input exposures that can be
-processed using less than 32Gb of memory at a time.  However, there are a number of
-ways this memory limit can be exceeded.  This has been addressed by implementing an
-overall memory model for the outlier detection that includes options to minimize the
-memory usage at the expense of file I/O.  The control over this memory model happens
-with the use of the ``in_memory`` parameter.  The full impact of this parameter
-during processing includes:
+These concerns have been addressed by implementing an overall memory model for outlier detection that
+includes options to minimize memory usage at the expense of temporary file I/O and runtime.
+Control over this memory model happens
+with the use of the ``in_memory`` parameter, which defaults to True.
+The full impact of setting this parameter to `False` includes:
 
-#. The ``save_open`` parameter gets set to `False`
-   when opening the input :py:class:`~jwst.datamodels.ModelContainer` object.
-   This forces all input models in the input :py:class:`~jwst.datamodels.ModelContainer` or
-   :py:class:`~jwst.datamodels.CubeModel` to get written out to disk.  The ModelContainer
-   then uses the filename of the input model during subsequent processing.
+#. The input :py:class:`~jwst.datamodels.library.ModelLibrary` object is loaded with `on_disk=True`.
+   This ensures that input models are loaded into memory one at at time,
+   and saved to a temporary file when not in use; these read-write operations are handled internally by
+   the :py:class:`~jwst.datamodels.library.ModelLibrary` object.
 
-#. The ``in_memory`` parameter gets passed to the :py:class:`~jwst.resample.ResampleStep`
-   to set whether or not to keep the resampled images in memory or not.  By default,
-   the outlier detection processing sets this parameter to `False` so that each resampled
-   image gets written out to disk.
+#. Computing the median image works by writing the resampled data frames to appendable files
+   on disk that are split into sections spatially but contain the entire ``groups``
+   axis. The section size is set to use roughly the same amount of memory as a single resampled
+   model, and since the resampled models are discarded from memory by the time the median calculation
+   happens, this choice avoids increasing the overall memory usage of the step.
+   Those sections are then read in one at a time to compute the median image.
 
-#. Computing the median image works section-by-section by only keeping 1Mb of each input
-   in memory at a time.  As a result, only the final output product array for the final
-   median image along with a stack of 1Mb image sections are kept in memory.
-
-#. The final resampling step also avoids keeping all inputs in memory by only reading
-   each input into memory 1 at a time as it gets resampled onto the final output product.
-
-These changes result in a minimum amount of memory usage during processing at the obvious
-expense of reading and writing the products from disk.
-
-
-Outlier Detection for Coronagraphic Data
-----------------------------------------
-Coronagraphic data is processed in a near-identical manner to direct imaging data, but
-no resampling occurs.
-
-
-Outlier Detection for TSO data
--------------------------------
-Normal imaging data benefit from combining all integrations into a
-single image. TSO data's value, however, comes from looking for variations from one
-integration to the next.  The outlier detection algorithm, therefore, gets run with 
-a few variations to accomodate the nature of these 3D data. See the 
-:ref:`TSO outlier detection <outlier-detection-tso>` documentation for details.
-
-
-Outlier Detection for IFU data
-------------------------------
-Integral Field Unit (IFU) data is handled as 2D images, similar to direct
-imaging modes. The nature of the detection algorithm, however, is quite
-different and involves measuring the differences between neighboring pixels
-in the spatial (cross-dispersion) direction within the IFU slice images.
-See the :ref:`IFU outlier detection <outlier-detection-ifu>` documentation for
-all the details.
-
-
-Outlier Detection for Slit data
--------------------------------
-See the :ref:`IFU outlier detection <outlier-detection-spec>` documentation for
-details.
-
-.. automodapi:: jwst.outlier_detection.outlier_detection
+These changes result in a minimum amount of memory usage during processing, but runtimes are
+longer because many read and write operations are needed. Note that if a ModelLibrary object
+is input to the step, the memory behavior of the step is read from the ``on_disk`` status
+of the ModelLibrary object, and the ``in_memory`` parameter of the step is ignored.
+When running ``calwebb_image3``, the ``in_memory`` flag should be set at the pipeline level,
+e.g., ``strun calwebb_image3 asn.json --in-memory=False``; the step-specific flag will be ignored.

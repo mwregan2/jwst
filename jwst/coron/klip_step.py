@@ -1,18 +1,20 @@
-#! /usr/bin/env python
+import logging
+
 from stdatamodels.jwst import datamodels
 
-from ..stpipe import Step
-from . import klip
-
+from jwst.coron import klip
+from jwst.stpipe import Step
 
 __all__ = ["KlipStep"]
 
+log = logging.getLogger(__name__)
+
 
 class KlipStep(Step):
-
     """
-    KlipStep: Performs KLIP processing on a science target coronagraphic
-    exposure. The input science exposure is assumed to be a fully calibrated
+    Performs KLIP processing on a science target coronagraphic exposure.
+
+    The input science exposure is assumed to be a fully calibrated
     level-2b image. The processing is performed using a set of reference PSF
     images observed in the same coronagraphic mode.
     """
@@ -21,24 +23,34 @@ class KlipStep(Step):
 
     spec = """
         truncate = integer(default=50,min=0) # The number of KL transform rows to keep
-    """
+    """  # noqa: E501
 
     def process(self, target, psfrefs):
+        """
+        Execute the KLIP calibration step.
 
-        with datamodels.open(target) as target_model:
+        Parameters
+        ----------
+        target : str or CubeModel
+            CubeModel or file containing science target exposure
+        psfrefs : str or CubeModel
+            CubeModel or file containing PSF Reference exposures
 
+        Returns
+        -------
+        psf_sub : CubeModel
+            Science target CubeModel with the PSF subtracted
+        """
+        with datamodels.open(target) as target_model, datamodels.open(psfrefs) as refs_model:
             # Retrieve the parameter values
             truncate = self.truncate
-            self.log.info('KL transform truncation = %d', truncate)
-
-            # Get the PSF reference images
-            refs_model = datamodels.open(psfrefs)
+            log.info("KL transform truncation = %d", truncate)
 
             # Call the KLIP routine
             psf_sub, psf_fit = klip.klip(target_model, refs_model, truncate)
 
         # Update the step completion status
-        psf_sub.meta.cal_step.klip = 'COMPLETE'
+        psf_sub.meta.cal_step.klip = "COMPLETE"
 
         # return psf_sub, psf_fit
         return psf_sub

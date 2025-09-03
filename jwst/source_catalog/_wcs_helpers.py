@@ -1,17 +1,14 @@
-# Licensed under a 3-clause BSD style license - see LICENSE.rst
-# (taken from photutils: should probably migrate into astropy.wcs)
-"""
-This module provides WCS helper tools.
-"""
+"""Provide WCS helper tools to source_catalog."""
 
 import astropy.units as u
 import numpy as np
 
+__all__ = []  # type: ignore[var-annotated]
+
 
 def pixel_scale_angle_at_skycoord(skycoord, wcs, offset=1 * u.arcsec):
     """
-    Calculate the pixel coordinate and scale and WCS rotation angle at
-    the position of a SkyCoord coordinate.
+    Calculate the pixel coordinate, scale, and WCS rotation angle at a SkyCoord coordinate.
 
     Parameters
     ----------
