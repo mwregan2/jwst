@@ -1,19 +1,21 @@
+import logging
 from collections.abc import Sequence
+
 from stdatamodels.jwst import datamodels
 
+from jwst.assign_mtwcs import assign_mtwcs_step
 from jwst.datamodels import ModelLibrary
-
-from ..stpipe import Pipeline
-from ..lib.exposure_types import is_moving_target
-
-from ..assign_mtwcs import assign_mtwcs_step
-from ..tweakreg import tweakreg_step
-from ..skymatch import skymatch_step
-from ..resample import resample_step
-from ..outlier_detection import outlier_detection_step
-from ..source_catalog import source_catalog_step
+from jwst.lib.exposure_types import is_moving_target
+from jwst.outlier_detection import outlier_detection_step
+from jwst.resample import resample_step
+from jwst.skymatch import skymatch_step
+from jwst.source_catalog import source_catalog_step
+from jwst.stpipe import Pipeline
+from jwst.tweakreg import tweakreg_step
 
 __all__ = ["Image3Pipeline"]
+
+log = logging.getLogger(__name__)
 
 
 class Image3Pipeline(Pipeline):
@@ -21,12 +23,7 @@ class Image3Pipeline(Pipeline):
     Apply level 3 processing to imaging-mode data from any JWST instrument.
 
     Included steps are:
-        assign_mtwcs
-        tweakreg
-        skymatch
-        outlier_detection
-        resample
-        source_catalog
+    assign_mtwcs, tweakreg, skymatch, outlier_detection, resample, and source_catalog.
     """
 
     class_alias = "calwebb_image3"
@@ -51,10 +48,10 @@ class Image3Pipeline(Pipeline):
 
         Parameters
         ----------
-        input_data : Level3 Association, or `~jwst.datamodels.ModelLibrary`
+        input_data : Level3 Association, or `~jwst.datamodels.library.ModelLibrary`
             The exposures to process
         """
-        self.log.info("Starting calwebb_image3 ...")
+        log.info("Starting calwebb_image3 ...")
 
         # Configure settings for saving results files
         self.outlier_detection.suffix = "crf"
@@ -79,9 +76,8 @@ class Image3Pipeline(Pipeline):
 
         if has_groups:
             with input_models:
-                model = input_models.borrow(0)
-                is_moving = is_moving_target(model)
-                input_models.shelve(model, 0, modify=False)
+                meta = input_models.read_metadata(0)
+                is_moving = is_moving_target(meta)
             if is_moving:
                 input_models = self.assign_mtwcs.run(input_models)
             else:
@@ -91,7 +87,7 @@ class Image3Pipeline(Pipeline):
             input_models = self.outlier_detection.run(input_models)
 
         elif self.skymatch.skymethod == "match":
-            self.log.warning(
+            log.warning(
                 "Turning 'skymatch' step off for a single input image when 'skymethod' is 'match'"
             )
 

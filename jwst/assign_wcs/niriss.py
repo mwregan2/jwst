@@ -1,35 +1,33 @@
 import logging
-import numpy as np
 
 import asdf
+import gwcs.coordinate_frames as cf
+import numpy as np
 from astropy import coordinates as coord
 from astropy import units as u
 from astropy.modeling import bind_bounding_box
-from astropy.modeling.models import Const1D, Mapping, Identity, Shift
 from astropy.modeling.bounding_box import CompoundBoundingBox
-import gwcs.coordinate_frames as cf
+from astropy.modeling.models import Const1D, Identity, Mapping, Shift
 from gwcs import wcs
-
-from stdatamodels.jwst.datamodels import ImageModel, NIRISSGrismModel, DistortionModel
+from stdatamodels.jwst.datamodels import DistortionModel, ImageModel, NIRISSGrismModel
 from stdatamodels.jwst.transforms.models import (
-    NirissSOSSModel,
-    NIRISSForwardRowGrismDispersion,
     NIRISSBackwardGrismDispersion,
     NIRISSForwardColumnGrismDispersion,
+    NIRISSForwardRowGrismDispersion,
+    NirissSOSSModel,
 )
 
-from .util import (
+from jwst.assign_wcs import pointing
+from jwst.assign_wcs.util import (
+    bounding_box_from_subarray,
     not_implemented_mode,
     subarray_transform,
-    velocity_correction,
-    bounding_box_from_subarray,
     transform_bbox_from_shape,
+    velocity_correction,
 )
-from . import pointing
-from ..lib.reffile_utils import find_row
+from jwst.lib.reffile_utils import find_row
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
 
 __all__ = ["create_pipeline", "imaging", "niriss_soss", "niriss_soss_set_input", "wfss"]
 
@@ -48,7 +46,7 @@ def create_pipeline(input_model, reference_files):
     Returns
     -------
     pipeline : list
-        The WCS pipeline, suitable for input into `gwcs.WCS`.
+        The WCS pipeline, suitable for input into `gwcs.wcs.WCS`.
     """
     log.debug(f"reference files used in NIRISS WCS pipeline: {reference_files}")
     exp_type = input_model.meta.exposure.type.lower()
@@ -70,7 +68,7 @@ def niriss_soss_set_input(model, order_number):
 
     Returns
     -------
-    gwcs.WCS
+    gwcs.wcs.WCS
         The WCS corresponding to the spectral order.
     """
     # Make sure the spectral order is available.
@@ -152,7 +150,7 @@ def niriss_soss(input_model, reference_files):
     Returns
     -------
     pipeline : list
-        The WCS pipeline, suitable for input into `gwcs.WCS`.
+        The WCS pipeline, suitable for input into `gwcs.wcs.WCS`.
     """
     # Get the target RA and DEC, they will be used for setting the WCS RA
     # and DEC based on a conversation with Kevin Volk.
@@ -255,7 +253,7 @@ def imaging(input_model, reference_files):
     Returns
     -------
     pipeline : list
-        The WCS pipeline, suitable for input into `gwcs.WCS`.
+        The WCS pipeline, suitable for input into `gwcs.wcs.WCS`.
     """
     detector = cf.Frame2D(name="detector", axes_order=(0, 1), unit=(u.pix, u.pix))
     v2v3 = cf.Frame2D(
@@ -362,7 +360,7 @@ def wfss(input_model, reference_files):
     Returns
     -------
     pipeline : list
-        The WCS pipeline, suitable for input into `gwcs.WCS`.
+        The WCS pipeline, suitable for input into `gwcs.wcs.WCS`.
 
     Notes
     -----
@@ -428,11 +426,11 @@ def wfss(input_model, reference_files):
     # Get the disperser parameters which are defined as a model for each
     # spectral order
     with NIRISSGrismModel(reference_files["specwcs"]) as f:
-        dispx = f.dispx
-        dispy = f.dispy
-        displ = f.displ
-        invdispl = f.invdispl
-        orders = f.orders
+        dispx = f.dispx.instance
+        dispy = f.dispy.instance
+        displ = f.displ.instance
+        invdispl = f.invdispl.instance
+        orders = f.orders.instance
         fwcpos_ref = f.fwcpos_ref
 
     # This is the actual rotation from the input model

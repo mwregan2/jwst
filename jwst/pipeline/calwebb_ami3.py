@@ -2,26 +2,21 @@
 import logging
 from pathlib import Path
 
-from ..stpipe import Pipeline
-
 # step imports
-from ..ami import ami_analyze_step
-from ..ami import ami_normalize_step
+from jwst.ami import ami_analyze_step, ami_normalize_step
+from jwst.stpipe import Pipeline
 
 __all__ = ["Ami3Pipeline"]
 
 # Define logging
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
 
 
 class Ami3Pipeline(Pipeline):
     """
     Apply all level-3 calibration steps to an association of level-2b AMI exposures.
 
-    Included steps are:
-    ami_analyze (fringe detection)
-    ami_normalize (normalize results by reference target)
+    Included steps are: ami_analyze and ami_normalize.
     """
 
     class_alias = "calwebb_ami3"
@@ -110,7 +105,7 @@ class Ami3Pipeline(Pipeline):
                 result.meta.asn.table_name = Path(asn.filename).name
 
                 # Perform blending of metadata for all inputs to this output file
-                # self.log.info('Blending metadata for PSF normalized target')
+                # log.info('Blending metadata for PSF normalized target')
                 self.save_model(result, suffix="aminorm-oi")
                 result.close()
             del psf_lg

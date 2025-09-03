@@ -13,47 +13,50 @@ import numpy as np
 from astropy import coordinates as coord
 from astropy import units as u
 from astropy.io import fits
+from astropy.modeling import bind_bounding_box, fix_inputs, models
 from astropy.modeling import bounding_box as mbbox
-from astropy.modeling import fix_inputs, models, bind_bounding_box
-from astropy.modeling.models import Mapping, Identity, Const1D, Scale, Tabular1D
+from astropy.modeling.models import Const1D, Identity, Mapping, Scale, Tabular1D
 from gwcs import coordinate_frames as cf
 from gwcs import selector
 from gwcs.wcstools import grid_from_bounding_box
-
 from stdatamodels.jwst.datamodels import (
-    CollimatorModel,
     CameraModel,
+    CollimatorModel,
     DisperserModel,
     FOREModel,
+    FPAModel,
     IFUFOREModel,
-    MSAModel,
-    OTEModel,
     IFUPostModel,
     IFUSlicerModel,
+    MSAModel,
+    OTEModel,
     WavelengthrangeModel,
-    FPAModel,
 )
 from stdatamodels.jwst.transforms.models import (
-    Rotation3DToGWA,
+    AngleFromGratingEquation,
     DirCos2Unitless,
+    Gwa2Slit,
+    Logical,
+    RefractionIndexFromPrism,
+    Rotation3DToGWA,
+    Slit,
     Slit2Msa,
     Slit2MsaLegacy,
-    AngleFromGratingEquation,
-    WavelengthFromGratingEquation,
-    Gwa2Slit,
-    Unitless2DirCos,
-    Logical,
-    Slit,
     Snell,
-    RefractionIndexFromPrism,
+    Unitless2DirCos,
+    WavelengthFromGratingEquation,
 )
 
+from jwst.assign_wcs import pointing
+from jwst.assign_wcs.util import (
+    MSAFileError,
+    NoDataOnDetectorError,
+    not_implemented_mode,
+    velocity_correction,
+)
 from jwst.lib.exposure_types import is_nrs_ifu_lamp
-from .util import MSAFileError, NoDataOnDetectorError, not_implemented_mode, velocity_correction
-from . import pointing
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
 
 FIXED_SLIT_NUMS = {"NONE": 0, "S200A1": 1, "S200A2": 2, "S400A1": 3, "S1600A1": 4, "S200B1": 5}
 
@@ -91,7 +94,7 @@ def create_pipeline(input_model, reference_files, slit_y_range):
     Returns
     -------
     pipeline : list
-        The WCS pipeline, suitable for input into `gwcs.WCS`.
+        The WCS pipeline, suitable for input into `gwcs.wcs.WCS`.
     """
     exp_type = input_model.meta.exposure.type.lower()
     if input_model.meta.instrument.grating.lower() == "mirror":
@@ -129,7 +132,7 @@ def imaging(input_model, reference_files):
     Returns
     -------
     pipeline : list
-        The WCS pipeline, suitable for input into `gwcs.WCS`.
+        The WCS pipeline, suitable for input into `gwcs.wcs.WCS`.
     """
     # Get the corrected disperser model
     disperser = get_disperser(input_model, reference_files["disperser"])
@@ -260,7 +263,7 @@ def ifu(input_model, reference_files, slit_y_range=(-0.55, 0.55)):
     Returns
     -------
     pipeline : list
-        The WCS pipeline, suitable for input into `gwcs.WCS`.
+        The WCS pipeline, suitable for input into `gwcs.wcs.WCS`.
     """
     detector = input_model.meta.instrument.detector
     grating = input_model.meta.instrument.grating
@@ -417,7 +420,7 @@ def slits_wcs(input_model, reference_files, slit_y_range):
     Returns
     -------
     pipeline : list
-        The WCS pipeline, suitable for input into `gwcs.WCS`.
+        The WCS pipeline, suitable for input into `gwcs.wcs.WCS`.
     """
     open_slits_id = get_open_slits(input_model, reference_files, slit_y_range)
     if not open_slits_id:
@@ -450,7 +453,7 @@ def slitlets_wcs(input_model, reference_files, open_slits_id):
     Returns
     -------
     pipeline : list
-        The WCS pipeline, suitable for input into `gwcs.WCS`.
+        The WCS pipeline, suitable for input into `gwcs.wcs.WCS`.
 
     Notes
     -----
@@ -2919,7 +2922,7 @@ def nrs_lamp(input_model, reference_files, slit_y_range):
     Returns
     -------
     pipeline : list
-        The WCS pipeline, suitable for input into `gwcs.WCS`.
+        The WCS pipeline, suitable for input into `gwcs.wcs.WCS`.
     """
     lamp_mode = input_model.meta.instrument.lamp_mode
     if isinstance(lamp_mode, str):

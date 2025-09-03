@@ -1,18 +1,17 @@
+import logging
+
 from stdatamodels.jwst import datamodels
-from ..stpipe import Step
-from . import gain_scale
+
+from jwst.gain_scale import gain_scale
+from jwst.stpipe import Step
 
 __all__ = ["GainScaleStep"]
 
+log = logging.getLogger(__name__)
+
 
 class GainScaleStep(Step):
-    """
-    Rescale all integrations in an exposure by gain_factor.
-
-    GainScaleStep: Rescales countrate data to account for use of a
-    non-standard gain value. All integrations are multiplied by the
-    factor GAINFACT.
-    """
+    """Rescale all integrations in an exposure by a gain factor."""
 
     class_alias = "gain_scale"
 
@@ -23,6 +22,9 @@ class GainScaleStep(Step):
     def process(self, step_input):
         """
         Perform gain scale step.
+
+        Rescales countrate data to account for use of a non-standard
+        gain value. All integrations are multiplied by the factor GAINFACT.
 
         Parameters
         ----------
@@ -44,8 +46,8 @@ class GainScaleStep(Step):
 
                 # Try to read the GAINFACT keyword value
                 if gain_model.meta.exposure.gain_factor is None:
-                    self.log.info("GAINFACT not found in gain reference file")
-                    self.log.info("Step will be skipped")
+                    log.info("GAINFACT not found in gain reference file")
+                    log.info("Step will be skipped")
                     input_model.meta.cal_step.gain_scale = "SKIPPED"
                     del gain_model
                     return input_model

@@ -1,11 +1,13 @@
 #
 #  Module for  subtracting reset correction from  science data sets
 #
-import numpy as np
 import logging
 
+import numpy as np
+
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+
+__all__ = ["do_correction"]
 
 
 def do_correction(output_model, reset_model):
@@ -22,15 +24,15 @@ def do_correction(output_model, reset_model):
 
     Parameters
     ----------
-    output_model : `~jwst.datamodel.RampModel`
+    output_model : `~jwst.datamodels.RampModel`
         Science data to be corrected
 
-    reset_model : `~jwst.datamodel.ResetModel`
+    reset_model : `~jwst.datamodels.ResetModel`
         Reset reference file model
 
     Returns
     -------
-    output_model : `~jwst.datamodel.RampModel`
+    output_model : `~jwst.datamodels.RampModel`
         Reset-subtracted science data
     """
     # Save some data params for easy use later

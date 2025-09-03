@@ -1,16 +1,14 @@
-import numpy as np
-from jwst.resample.resample_utils import build_mask
-
-from jwst import datamodels as dm
-
-from stcal.outlier_detection.utils import compute_weight_threshold
-from .utils import flag_model_crs, nanmedian3D
-from ._fileio import save_median
-
 import logging
 
+import numpy as np
+from stcal.outlier_detection.utils import compute_weight_threshold
+
+from jwst import datamodels as dm
+from jwst.outlier_detection._fileio import save_median
+from jwst.outlier_detection.utils import flag_model_crs, nanmedian3D
+from jwst.resample.resample_utils import build_mask
+
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
 
 
 __all__ = ["detect_outliers"]
@@ -30,7 +28,7 @@ def detect_outliers(
 
     Parameters
     ----------
-    input_model : ~jwst.datamodels.CubeModel
+    input_model : `~jwst.datamodels.CubeModel`
         The input cube model.
     save_intermediate_results : bool
         If True, save the rolling median model as a CubeModel.
@@ -47,11 +45,9 @@ def detect_outliers(
 
     Returns
     -------
-    ~jwst.datamodels.CubeModel
+    `~jwst.datamodels.CubeModel`
         The input model with outliers flagged.
     """
-    if not isinstance(input_model, dm.JwstDataModel):
-        input_model = dm.open(input_model)
     if isinstance(input_model, dm.ModelContainer):
         raise TypeError("OutlierDetectionTSO does not support ModelContainer input.")
     weighted_cube = weight_no_resample(input_model, good_bits)
@@ -93,14 +89,14 @@ def weight_no_resample(input_model, good_bits):
 
     Parameters
     ----------
-    input_model : ~jwst.datamodels.CubeModel
+    input_model : `~jwst.datamodels.CubeModel`
         The input cube model.
     good_bits : int
         DQ flag bit values indicating good pixels.
 
     Returns
     -------
-    ~jwst.datamodels.CubeModel
+    `~jwst.datamodels.CubeModel`
         A copy of the input cube model with weights assigned in the `wht` extension.
 
     Notes
@@ -132,10 +128,10 @@ def compute_rolling_median(
 
     Parameters
     ----------
-    model : ~jwst.datamodels.CubeModel
+    model : `~jwst.datamodels.CubeModel`
         The input cube model
 
-    weight_threshold : np.ndarray
+    weight_threshold : ndarray
         The weight thresholds for each integration.
 
     w : int
@@ -143,7 +139,7 @@ def compute_rolling_median(
 
     Returns
     -------
-    np.ndarray
+    ndarray
         The rolling median of the input data. Same dimensions as input.
     """
     sci = model.data
@@ -175,14 +171,14 @@ def moving_median_over_zeroth_axis(x: np.ndarray, w: int) -> np.ndarray:
 
     Parameters
     ----------
-    x : np.ndarray
+    x : ndarray
         The input array.
     w : int
         The window size.
 
     Returns
     -------
-    np.ndarray
+    ndarray
         The rolling median of the input array. Same dimensions as input.
     """
     if w <= 1:

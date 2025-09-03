@@ -1,18 +1,16 @@
 """Pipeline implementation of Jens Kammerer's bp_fix code based on Ireland 2013 algorithm."""
 
-import numpy as np
 import logging
 import warnings
-
 from copy import deepcopy
-from .matrix_dft import matrix_dft
-from scipy.ndimage import median_filter
 
+import numpy as np
+from scipy.ndimage import median_filter
 from stdatamodels.jwst.datamodels import dqflags
 
+from jwst.ami.matrix_dft import matrix_dft
+
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
-logging.captureWarnings(True)
 
 micron = 1.0e-6
 filts = ["F277W", "F380M", "F430M", "F480M", "F356W", "F444W"]
@@ -41,6 +39,16 @@ PUPL_CRC = 6.603464  # / Circumscribing diameter for JWST primary
 
 DO_NOT_USE = dqflags.pixel["DO_NOT_USE"]
 JUMP_DET = dqflags.pixel["JUMP_DET"]
+
+__all__ = [
+    "create_wavelengths",
+    "calc_pupil_support",
+    "transform_image",
+    "calcpsf",
+    "bad_pixels",
+    "fourier_corr",
+    "fix_bad_pixels",
+]
 
 
 def create_wavelengths(filtername):
@@ -174,7 +182,7 @@ def bad_pixels(data, median_size, median_tres):
 
     Returns
     -------
-    pxdq : np.ndarray[int]
+    pxdq : ndarray[int]
         Bad pixel mask identified by median filtering
     """
     mfil_data = median_filter(data, size=median_size)
@@ -272,7 +280,7 @@ def fix_bad_pixels(data, pxdq0, filt, pxsc, nrm_model):
     -------
     data : numpy array
         Corrected data
-    pxdq : np.ndarray[int]
+    pxdq : ndarray[int]
         Mask of bad pixels, updated if new ones were found
     """
     dq_dnu = pxdq0 & DO_NOT_USE == DO_NOT_USE

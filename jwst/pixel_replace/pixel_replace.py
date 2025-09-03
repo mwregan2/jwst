@@ -8,7 +8,8 @@ from stdatamodels.jwst import datamodels
 from jwst.assign_wcs import nirspec
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+
+__all__ = ["PixelReplacement"]
 
 
 class PixelReplacement:
@@ -332,6 +333,12 @@ class PixelReplacement:
             adjacent_condition = self.custom_slice(dispaxis, valid_adjacent_inds)
             profile_data = model.data[adjacent_condition]
             profile_err = model.err[adjacent_condition]
+            if profile_data.size == 0:
+                log.info(
+                    f"Profile in {self.LOG_SLICE[dispaxis - 1]} {ind} "
+                    f"has no valid adjacent values - skipping."
+                )
+                continue
 
             # Mask out bad pixels
             invalid_condition = (model.dq[adjacent_condition] & self.DO_NOT_USE).astype(bool)

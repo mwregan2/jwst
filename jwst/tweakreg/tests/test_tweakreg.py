@@ -5,22 +5,19 @@ from copy import deepcopy
 
 import asdf
 import numpy as np
-from numpy.testing import assert_allclose
 import pytest
-from astropy.wcs import WCS
 from astropy.modeling.models import Shift
 from astropy.table import Table
 from astropy.utils.data import get_pkg_data_filename
-from photutils.utils import NoDetectionsWarning
+from astropy.wcs import WCS
 from gwcs.wcstools import grid_from_bounding_box
+from numpy.testing import assert_allclose
+from stcal.tweakreg import tweakreg as twk
+from stcal.tweakreg.utils import _wcsinfo_from_wcs_transform
 from stdatamodels.jwst.datamodels import ImageModel
 
 from jwst.datamodels import ModelContainer
-from jwst.tweakreg import tweakreg_step
-from jwst.tweakreg import tweakreg_catalog
-from stcal.tweakreg.utils import _wcsinfo_from_wcs_transform
-from stcal.tweakreg import tweakreg as twk
-
+from jwst.tweakreg import tweakreg_catalog, tweakreg_step
 
 BKG_LEVEL = 0.001
 N_EXAMPLE_SOURCES = 21
@@ -30,8 +27,7 @@ REFCAT = "GAIADR3"
 
 @pytest.fixture
 def mock_source_catalog():
-
-    columns = ['id', 'xcentroid', 'ycentroid', 'flux']
+    columns = ["id", "xcentroid", "ycentroid", "flux"]
     catalog = Table(names=columns, dtype=(int, float, float, float))
     catalog.add_row([1, 100.0, 100.0, 100.0])
 
@@ -53,10 +49,10 @@ def test_rename_catalog_columns(mock_source_catalog, inplace):
     else:
         catalog = renamed_catalog
 
-    assert 'xcentroid' not in catalog.colnames
-    assert 'ycentroid' not in catalog.colnames
-    assert 'x' in catalog.colnames
-    assert 'y' in catalog.colnames
+    assert "xcentroid" not in catalog.colnames
+    assert "ycentroid" not in catalog.colnames
+    assert "x" in catalog.colnames
+    assert "y" in catalog.colnames
 
 
 @pytest.mark.parametrize("missing", ["x", "y", "xcentroid", "ycentroid"])
@@ -87,8 +83,7 @@ def test_is_wcs_correction_small(offset, is_good):
     Changes to the defaults for these parameters will likely require updating the
     values uses for parametrizing this test.
     """
-    path = get_pkg_data_filename(
-        "data/mosaic_long_i2d_gwcs.asdf", package="jwst.tweakreg.tests")
+    path = get_pkg_data_filename("data/mosaic_long_i2d_gwcs.asdf", package="jwst.tweakreg.tests")
     with asdf.open(path) as af:
         wcs = af.tree["wcs"]
 
@@ -99,9 +94,6 @@ def test_is_wcs_correction_small(offset, is_good):
     twcs.bounding_box = wcs.bounding_box
 
     step = tweakreg_step.TweakRegStep()
-    # TODO: remove 'roundlo' once
-    # https://github.com/astropy/photutils/issues/1977 is fixed
-    step.roundlo = -1.0e-12
 
     class FakeCorrector:
         def __init__(self, wcs, original_skycoord):
@@ -110,7 +102,7 @@ def test_is_wcs_correction_small(offset, is_good):
 
         @property
         def meta(self):
-            return {'original_skycoord': self._original_skycoord}
+            return {"original_skycoord": self._original_skycoord}
 
     correctors = [FakeCorrector(twcs, twk._wcs_to_skycoord(wcs))]
 
@@ -125,31 +117,31 @@ def test_is_wcs_correction_small(offset, is_good):
 
 
 def test_expected_failure_bad_starfinder():
-
     model = ImageModel()
     with pytest.raises(ValueError):
-        tweakreg_catalog.make_tweakreg_catalog(model, 5.0, 2.5, bkg_boxsize=400, starfinder_name='bad_value')
+        tweakreg_catalog.make_tweakreg_catalog(
+            model, 5.0, 2.5, bkg_boxsize=400, starfinder_name="bad_value"
+        )
 
 
 def test_write_catalog(mock_source_catalog, tmp_cwd):
-    '''
-    Covers an issue where catalog write did not respect self.output_dir
-    '''
+    """
+    Covers an issue where catalog write did not respect self.output_dir.
+    """
 
-    OUTDIR = 'outdir'
+    OUTDIR = "outdir"
     step = tweakreg_step.TweakRegStep()
     os.mkdir(OUTDIR)
     step.output_dir = OUTDIR
-    expected_outfile = os.path.join(OUTDIR, 'catalog.ecsv')
-    step._write_catalog(mock_source_catalog, 'catalog.ecsv')
+    expected_outfile = os.path.join(OUTDIR, "catalog.ecsv")
+    step._write_catalog(mock_source_catalog, "catalog.ecsv")
 
     assert os.path.exists(expected_outfile)
 
 
 @pytest.fixture()
 def example_wcs():
-    path = get_pkg_data_filename(
-        "data/nrcb1-wcs.asdf", package="jwst.tweakreg.tests")
+    path = get_pkg_data_filename("data/nrcb1-wcs.asdf", package="jwst.tweakreg.tests")
     with asdf.open(path, lazy_load=False) as af:
         return af.tree["wcs"]
 
@@ -166,24 +158,23 @@ def example_input(example_wcs):
     m0.meta.observation.date = "2024-07-10T00:00:00.0"
 
     # and a few 'sources'
+    point_source = np.ones((7, 7)) * 0.1
+    point_source[1:6, 1:6] = 0.3
+    point_source[2:5, 2:5] = 0.5
+    point_source[3, 3] = 1.0
+
     m0.data[:] = BKG_LEVEL
     n_sources = N_EXAMPLE_SOURCES  # a few more than default minobj
     rng = np.random.default_rng(26)
     xs = rng.choice(50, n_sources, replace=False) * 8 + 10
     ys = rng.choice(50, n_sources, replace=False) * 8 + 10
     for y, x in zip(ys, xs):
-        m0.data[y-2:y+3, x-2:x+3] = [
-            [0.1, 0.1, 0.2, 0.1, 0.1],
-            [0.1, 0.4, 0.6, 0.4, 0.1],
-            [0.1, 0.6, 0.8, 0.6, 0.1],
-            [0.1, 0.4, 0.6, 0.4, 0.1],
-            [0.1, 0.1, 0.2, 0.1, 0.1],
-        ]
+        m0.data[y - 3 : y + 4, x - 3 : x + 4] = point_source
 
     m1 = m0.copy()
     # give each a unique filename
-    m0.meta.filename = 'some_file_0.fits'
-    m1.meta.filename = 'some_file_1.fits'
+    m0.meta.filename = "some_file_0.fits"
+    m1.meta.filename = "some_file_1.fits"
     c = ModelContainer([m0, m1])
     return c
 
@@ -201,14 +192,11 @@ def test_tweakreg_step(example_input, with_shift):
         example_input[1].data[-9:] = BKG_LEVEL
 
     # assign images to different groups (so they are aligned to each other)
-    example_input[0].meta.group_id = 'a'
-    example_input[1].meta.group_id = 'b'
+    example_input[0].meta.group_id = "a"
+    example_input[1].meta.group_id = "b"
 
     # make the step with default arguments
     step = tweakreg_step.TweakRegStep()
-    # TODO: remove 'roundlo' once
-    # https://github.com/astropy/photutils/issues/1977 is fixed
-    step.roundlo=-1.0e-12
 
     # run the step on the example input modified above
     result = step.run(example_input)
@@ -216,7 +204,7 @@ def test_tweakreg_step(example_input, with_shift):
     # check that step completed
     with result:
         for model in result:
-            assert model.meta.cal_step.tweakreg == 'COMPLETE'
+            assert model.meta.cal_step.tweakreg == "COMPLETE"
             result.shelve(model, modify=False)
 
         # and that the wcses differ by a small amount due to the shift above
@@ -227,25 +215,22 @@ def test_tweakreg_step(example_input, with_shift):
         result.shelve(r0, 0, modify=False)
         result.shelve(r1, 1, modify=False)
     if with_shift:
-        assert abs_delta > 1E-5
+        assert abs_delta > 1e-5
     else:
-        assert abs_delta < 1E-12
+        assert abs_delta < 1e-12
 
 
-@pytest.mark.parametrize("alignment_type", ['', 'abs_'])
+@pytest.mark.parametrize("alignment_type", ["", "abs_"])
 def test_src_confusion_pars(example_input, alignment_type):
     # assign images to different groups (so they are aligned to each other)
-    example_input[0].meta.group_id = 'a'
-    example_input[1].meta.group_id = 'b'
+    example_input[0].meta.group_id = "a"
+    example_input[1].meta.group_id = "b"
 
     # make the step with arguments that may cause source confusion in match
     pars = {
         f"{alignment_type}separation": 1.0,
         f"{alignment_type}tolerance": 1.0,
         "abs_refcat": REFCAT,
-        # TODO: remove 'roundlo' once
-        # https://github.com/astropy/photutils/issues/1977 is fixed
-        "roundlo": -1.0e-12,
     }
     step = tweakreg_step.TweakRegStep(**pars)
     result = step.run(example_input)
@@ -253,7 +238,7 @@ def test_src_confusion_pars(example_input, alignment_type):
     # check that step was skipped
     with result:
         for model in result:
-            assert model.meta.cal_step.tweakreg == 'SKIPPED'
+            assert model.meta.cal_step.tweakreg == "SKIPPED"
             result.shelve(model)
 
 
@@ -268,7 +253,7 @@ def custom_catalog_path(tmp_path):
     n_sources = N_CUSTOM_SOURCES
     xs = rng.choice(50, n_sources, replace=False) * 8 + 10
     ys = rng.choice(50, n_sources, replace=False) * 8 + 10
-    catalog = Table(np.vstack((xs, ys)).T, names=['x', 'y'], dtype=[float, float])
+    catalog = Table(np.vstack((xs, ys)).T, names=["x", "y"], dtype=[float, float])
     catalog.write(fn)
     return fn
 
@@ -287,7 +272,9 @@ def custom_catalog_path(tmp_path):
 )
 @pytest.mark.parametrize("custom", [True, False])
 @pytest.mark.slow
-def test_custom_catalog(custom_catalog_path, example_input, catfile, asn, meta, custom, monkeypatch):
+def test_custom_catalog(
+    custom_catalog_path, example_input, catfile, asn, meta, custom, monkeypatch
+):
     """
     Test that TweakRegStep uses a custom catalog provided by the user
     when the correct set of options are provided. The combinations here can be confusing
@@ -299,8 +286,8 @@ def test_custom_catalog(custom_catalog_path, example_input, catfile, asn, meta, 
         - `use_custom_catalogs` (True/False)
         - a "valid" file passed as `catfile`
     """
-    example_input[0].meta.group_id = 'a'
-    example_input[1].meta.group_id = 'b'
+    example_input[0].meta.group_id = "a"
+    example_input[1].meta.group_id = "b"
 
     # this worked because if use_custom_catalogs was true but
     # catfile was blank tweakreg still uses custom catalogs
@@ -315,28 +302,30 @@ def test_custom_catalog(custom_catalog_path, example_input, catfile, asn, meta, 
         model.save(model.meta.filename, dir_path=str(custom_catalog_path.parent))
         model.close()
     asn_data = {
-        'asn_id': 'foo',
-        'asn_pool': 'bar',
-        'products': [
+        "asn_id": "foo",
+        "asn_pool": "bar",
+        "products": [
             {
-                'members': [{'expname': m.meta.filename, 'exptype': 'science'} for m in example_input],
+                "members": [
+                    {"expname": m.meta.filename, "exptype": "science"} for m in example_input
+                ],
             },
         ],
     }
 
     if asn == "empty_asn_entry":
-        asn_data['products'][0]['members'][0]['tweakreg_catalog'] = ''
+        asn_data["products"][0]["members"][0]["tweakreg_catalog"] = ""
     elif asn == "cat_in_asn":
-        asn_data['products'][0]['members'][0]['tweakreg_catalog'] = str(custom_catalog_path.name)
+        asn_data["products"][0]["members"][0]["tweakreg_catalog"] = str(custom_catalog_path.name)
 
-    asn_path = custom_catalog_path.parent / 'example_input.json'
-    with open(asn_path, 'w') as f:
+    asn_path = custom_catalog_path.parent / "example_input.json"
+    with open(asn_path, "w") as f:
         json.dump(asn_data, f)
 
     # write out a catfile
     if catfile != "no_catfile":
-        catfile_path = custom_catalog_path.parent / 'catfile.txt'
-        with open(catfile_path, 'w') as f:
+        catfile_path = custom_catalog_path.parent / "catfile.txt"
+        with open(catfile_path, "w") as f:
             if catfile == "valid_catfile":
                 f.write(f"{example_input[0].meta.filename} {custom_catalog_path.name}")
             elif catfile == "empty_catfile_row":
@@ -359,10 +348,7 @@ def test_custom_catalog(custom_catalog_path, example_input, catfile, asn, meta, 
                 n_custom_sources = N_CUSTOM_SOURCES
 
     kwargs = {
-        'use_custom_catalogs': custom,
-        # TODO: remove 'roundlo' once
-        # https://github.com/astropy/photutils/issues/1977 is fixed
-        'roundlo': -1.0e-12,
+        "use_custom_catalogs": custom,
     }
     if catfile != "no_catfile":
         kwargs["catfile"] = str(catfile_path)
@@ -372,9 +358,9 @@ def test_custom_catalog(custom_catalog_path, example_input, catfile, asn, meta, 
     # patch _construct_wcs_corrector to check the correct catalog was loaded
     def patched_construct_wcs_corrector(wcs, wcsinfo, catalog, group_id, _seen=[]):
         # we don't need to continue
-        if group_id == 'a':
+        if group_id == "a":
             assert len(catalog) == n_custom_sources
-        elif group_id == 'b':
+        elif group_id == "b":
             assert len(catalog) == N_EXAMPLE_SOURCES
         _seen.append(wcs)
         if len(_seen) == 2:
@@ -399,8 +385,8 @@ def test_sip_approx(example_input, with_shift):
         example_input[1].data[-9:] = BKG_LEVEL
 
     # assign images to different groups (so they are aligned to each other)
-    example_input[0].meta.group_id = 'a'
-    example_input[1].meta.group_id = 'b'
+    example_input[0].meta.group_id = "a"
+    example_input[1].meta.group_id = "b"
 
     # call th step with override SIP approximation parameters
     step = tweakreg_step.TweakRegStep()
@@ -410,9 +396,6 @@ def test_sip_approx(example_input, with_shift):
     step.sip_max_inv_pix_error = 0.1
     step.sip_inv_degree = 3
     step.sip_npoints = 12
-    # TODO: remove 'roundlo' once
-    # https://github.com/astropy/photutils/issues/1977 is fixed
-    step.roundlo=-1.0e-12
 
     # run the step on the example input modified above
     result = step.run(example_input)
@@ -424,19 +407,19 @@ def test_sip_approx(example_input, with_shift):
         # project one point through each wcs and compare the difference
         abs_delta = abs(r1.meta.wcs(0, 0)[0] - r0.meta.wcs(0, 0)[0])
         if with_shift:
-            assert abs_delta > 1E-5
+            assert abs_delta > 1e-5
         else:
-            assert abs_delta < 1E-12
+            assert abs_delta < 1e-12
 
         # the first wcs is identical to the input and
         # does not have SIP approximation keywords --
         # they are normally set by assign_wcs
         assert np.allclose(r0.meta.wcs(0, 0)[0], example_input[0].meta.wcs(0, 0)[0])
-        for key in ['ap_order', 'bp_order']:
+        for key in ["ap_order", "bp_order"]:
             assert key not in r0.meta.wcsinfo.instance
 
         # for the second, SIP approximation should be present
-        for key in ['ap_order', 'bp_order']:
+        for key in ["ap_order", "bp_order"]:
             assert r1.meta.wcsinfo.instance[key] == 3
 
         # evaluate fits wcs and gwcs for the approximation, make sure they agree
@@ -452,6 +435,22 @@ def test_sip_approx(example_input, with_shift):
     assert np.allclose(fitswcs_res.dec.deg, gwcs_dec)
 
 
+def test_sourcefinders(example_input):
+    """Test that the three source finder options give the same results for high SNR sources."""
+
+    model = example_input[0]
+    thresh = 10.0  # SNR threshold above the bkg for star finder
+    fwhm = 2.5  # Gaussian kernel FWHM in pixels
+    iraf, _ = tweakreg_catalog.make_tweakreg_catalog(model, thresh, fwhm, starfinder_name="iraf")
+    dao, _ = tweakreg_catalog.make_tweakreg_catalog(model, thresh, fwhm, starfinder_name="dao")
+    segm, _ = tweakreg_catalog.make_tweakreg_catalog(
+        model, thresh, fwhm, starfinder_name="segmentation"
+    )
+
+    # check that the catalogs have the same number of sources
+    assert len(iraf) == len(dao) == len(segm) == N_EXAMPLE_SOURCES
+
+
 def test_make_tweakreg_catalog(example_input):
     """
     Simple test for the three starfinder options.
@@ -460,10 +459,13 @@ def test_make_tweakreg_catalog(example_input):
     in the image.
     """
     # run the step on the example input modified above
-    x,y = [], []
+    x, y = [], []
     for finder_name in ["iraf", "dao", "segmentation"]:
-        cat = tweakreg_catalog.make_tweakreg_catalog(
-            example_input[0], 10.0, 2.5, starfinder_name=finder_name,
+        cat, _ = tweakreg_catalog.make_tweakreg_catalog(
+            example_input[0],
+            10.0,
+            2.5,
+            starfinder_name=finder_name,
         )
         x.append(np.sort(np.array(cat["xcentroid"])))
         y.append(np.sort(np.array(cat["ycentroid"])))
@@ -472,29 +474,43 @@ def test_make_tweakreg_catalog(example_input):
 
     # check the locations are the same to within a small fraction of a pixel
     for j in range(2):
-        assert_allclose(x[j], x[j+1], atol=0.01)
-        assert_allclose(y[j], y[j+1], atol=0.01)
+        assert_allclose(x[j], x[j + 1], atol=0.01)
+        assert_allclose(y[j], y[j + 1], atol=0.01)
 
 
-def test_make_tweakreg_catalog_graceful_fail_no_sources(example_input):
+@pytest.mark.parametrize("finder", ["iraf", "dao", "segmentation"])
+def test_make_tweakreg_catalog_graceful_fail_no_sources(example_input, finder, log_watcher):
     """Test that the catalog creation fails gracefully when no sources are found."""
+    watcher = log_watcher(
+        "jwst.tweakreg.tweakreg_catalog",
+        message="No sources found in the image",
+        level="warning",
+    )
+
     # run the step on an input that is completely blank
     example_input[0].data[:] = 0.0
-    with pytest.warns(NoDetectionsWarning, match="No sources were found"):
-        # run the step on the example input modified above
-        cat = tweakreg_catalog.make_tweakreg_catalog(example_input[0], 10.0, 2.5,)
+    cat, _ = tweakreg_catalog.make_tweakreg_catalog(
+        example_input[0],
+        10.0,
+        2.5,
+        starfinder_name=finder,
+    )
 
+    watcher.assert_seen()
     assert len(cat) == 0
     assert type(cat) == Table
 
 
 def test_make_tweakreg_catalog_graceful_fail_bad_background(example_input, log_watcher):
     """Test that the catalog creation fails gracefully when the background cannot be determined."""
-    watcher = log_watcher("jwst.tweakreg.tweakreg_catalog",
-                          message="Error determining sky background", level="warning")
-    
+    watcher = log_watcher(
+        "jwst.tweakreg.tweakreg_catalog",
+        message="Error determining sky background",
+        level="warning",
+    )
+
     example_input[0].dq[:] = 1
-    cat = tweakreg_catalog.make_tweakreg_catalog(example_input[0], 10.0, 2.5)
+    cat, _ = tweakreg_catalog.make_tweakreg_catalog(example_input[0], 10.0, 2.5)
 
     watcher.assert_seen()
     assert len(cat) == 0

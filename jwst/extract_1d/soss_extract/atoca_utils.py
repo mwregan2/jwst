@@ -7,18 +7,34 @@ ATOCA: Algorithm to Treat Order ContAmination (English)
 @authors: Antoine Darveau-Bernier, Geert Jan Talens
 """
 
+import logging
+import warnings
+
 import numpy as np
 from numpy.polynomial import Polynomial
-import warnings
-from scipy.sparse import diags, csr_matrix
-from scipy.sparse.linalg import spsolve, lsqr, MatrixRankWarning
-from scipy.interpolate import interp1d, RectBivariateSpline, Akima1DInterpolator
-from scipy.optimize import minimize_scalar, brentq
-from scipy.interpolate import make_interp_spline
-import logging
+from scipy.interpolate import Akima1DInterpolator, RectBivariateSpline, interp1d, make_interp_spline
+from scipy.optimize import brentq, minimize_scalar
+from scipy.sparse import csr_matrix, diags
+from scipy.sparse.linalg import MatrixRankWarning, lsqr, spsolve
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+
+__all__ = [
+    "arange_2d",
+    "sparse_k",
+    "get_wave_p_or_m",
+    "oversample_grid",
+    "grid_from_map",
+    "grid_from_map_with_extrapolation",
+    "make_combined_adaptive_grid",
+    "throughput_soss",
+    "WebbKernel",
+    "get_c_matrix",
+    "finite_first_d",
+    "TikhoTests",
+    "try_solve_two_methods",
+    "Tikhonov",
+]
 
 
 def arange_2d(starts, stops):
@@ -1689,7 +1705,9 @@ class TikhoTests(dict):
             raise KeyError(msg) from None
 
         # Compute the reduced chi^2 for all tests
-        chi2 = np.nanmean(loss(self["error"] ** 2), axis=-1)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "Mean of empty slice", RuntimeWarning)
+            chi2 = np.nanmean(loss(self["error"] ** 2), axis=-1)
         # Remove residual dimensions
         return chi2.squeeze()
 
@@ -1733,7 +1751,10 @@ class TikhoTests(dict):
         # Get the norm-2 of the regularisation term
         reg2 = np.nansum(self["reg"] ** 2, axis=-1)
 
-        return _curvature_finite(self["factors"], np.log10(self[key]), np.log10(reg2))
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "divide by zero", RuntimeWarning)
+            warnings.filterwarnings("ignore", "invalid value", RuntimeWarning)
+            return _curvature_finite(self["factors"], np.log10(self[key]), np.log10(reg2))
 
     def best_factor(self, mode="curvature"):
         """
@@ -1843,8 +1864,12 @@ def try_solve_two_methods(matrix, result):
         try:
             return spsolve(matrix, result)
         except MatrixRankWarning:
-            log.info("ATOCA matrix solve failed with spsolve. Retrying with least-squares.")
-            return lsqr(matrix, result)[0]
+            log.warning("ATOCA matrix solve failed with spsolve. Retrying with least-squares.")
+            try:
+                return lsqr(matrix, result)[0]
+            except ValueError:
+                log.warning("No solution found. Filling solution array with NaN.")
+                return np.full(matrix.shape[1], np.nan)
 
 
 class Tikhonov:

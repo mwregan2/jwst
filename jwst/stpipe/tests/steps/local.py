@@ -1,8 +1,8 @@
-from jwst.stpipe import Step
 import logging
 
+from jwst.stpipe import Step
+
 log = logging.getLogger("FOO")
-log.setLevel(logging.DEBUG)
 
 
 class DummyStep(Step):
@@ -18,8 +18,7 @@ class DummyStep(Step):
         log.info("Default logger")
         log.debug("Default logger")
 
-        self.log.info(f"Foo: {self.foo}")
-
-        self.log.debug("Debug!!!")
+        log.info(f"Foo: {self.foo}")
+        log.debug("Debug!!!")
 
         return ImageModel(args[0])

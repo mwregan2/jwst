@@ -25,7 +25,6 @@ __all__ = ["remove_suffix"]
 
 # Configure logging
 logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
 
 # Suffixes that are hard-coded or otherwise
 # have to exist. Used by `find_suffixes` to
@@ -102,11 +101,9 @@ _calculated_suffixes = {
     "pathlossstep",
     "spec2pipeline",
     "darkpipeline",
-    "mrsimatchstep",
     "jumpstep",
     "masterbackgroundmosstep",
     "s3d",
-    "mrs_imatch",
     "saturationstep",
     "jump",
     "ipc",

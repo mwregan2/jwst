@@ -1,58 +1,20 @@
+import logging
+
 from stdatamodels.jwst import datamodels
 
 from jwst.clean_flicker_noise import clean_flicker_noise
-from ..stpipe import Step
+from jwst.stpipe import Step
 
 __all__ = ["NSCleanStep"]
+
+log = logging.getLogger(__name__)
 
 
 class NSCleanStep(Step):
     """
     Perform 1/f noise correction.
 
-    NSCleanStep: This step performs 1/f noise correction ("cleaning")
-    of NIRSpec images, using the "NSClean" method.
-
     NOTE: This step is a deprecated alias to the ``clean_flicker_noise`` step.
-
-    Attributes
-    ----------
-    fit_method : str, optional
-        The background fit algorithm to use.  Options are 'fft' and 'median';
-        'fft' performs the original NSClean implementation.
-    fit_by_channel : bool, optional
-        If set, flicker noise is fit independently for each detector channel.
-        Ignored for subarray data and for `fit_method` = 'fft'.
-    background_method : {'median', 'model', None}
-        If 'median', the preliminary background to remove and restore
-        is a simple median of the background data.  If 'model', the
-        background data is fit with a low-resolution model via
-        `~photutils.background.Background2D`.  If None, the background
-        value is 0.0.
-    background_box_size : tuple of int, optional
-        Box size for the data grid used by `Background2D` when
-        `background_method` = 'model'. For best results, use a box size
-        that evenly divides the input image shape.
-    mask_spectral_regions : bool, optional
-        Mask regions of the image defined by WCS bounding boxes for slits/slices.
-    n_sigma : float, optional
-        Sigma clipping threshold to be used in detecting outliers in the image.
-    fit_histogram : bool, optional
-        If set, the 'sigma' used with `n_sigma` for clipping outliers
-        is derived from a Gaussian fit to a histogram of values.
-        Otherwise, a simple iterative sigma clipping is performed.
-    single_mask : bool, optional
-        If set, a single mask will be created, regardless of
-        the number of input integrations. Otherwise, the mask will
-        be a 3D cube, with one plane for each integration.
-    user_mask : None, str, or `~jwst.datamodels.ImageModel`
-        Optional user-supplied mask image; path to file or opened datamodel.
-    save_mask : bool, optional
-        Save the computed mask image.
-    save_background : bool, optional
-        Save the computed background image.
-    save_noise : bool, optional
-        Save the computed noise image.
     """
 
     class_alias = "nsclean"
@@ -91,7 +53,7 @@ class NSCleanStep(Step):
             "The 'nsclean' step is a deprecated alias to 'clean_flicker_noise' "
             "and will be removed in future builds."
         )
-        self.log.warning(message)
+        log.warning(message)
 
         # Open the input data model
         with datamodels.open(input_data) as input_model:
@@ -124,7 +86,7 @@ class NSCleanStep(Step):
             # Save the mask, if requested
             if self.save_mask and mask_model is not None:
                 mask_path = self.make_output_path(basepath=input_model.meta.filename, suffix="mask")
-                self.log.info(f"Saving mask file {mask_path}")
+                log.info(f"Saving mask file {mask_path}")
                 mask_model.save(mask_path)
                 mask_model.close()
 
@@ -133,7 +95,7 @@ class NSCleanStep(Step):
                 bg_path = self.make_output_path(
                     basepath=input_model.meta.filename, suffix="flicker_bkg"
                 )
-                self.log.info(f"Saving background file {bg_path}")
+                log.info(f"Saving background file {bg_path}")
                 background_model.save(bg_path)
                 background_model.close()
 
@@ -142,7 +104,7 @@ class NSCleanStep(Step):
                 noise_path = self.make_output_path(
                     basepath=input_model.meta.filename, suffix="flicker_noise"
                 )
-                self.log.info(f"Saving noise file {noise_path}")
+                log.info(f"Saving noise file {noise_path}")
                 noise_model.save(noise_path)
                 noise_model.close()
 

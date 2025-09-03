@@ -11,7 +11,6 @@ Package Index
    assign_mtwcs/index.rst
    assign_wcs/index.rst
    associations/index.rst
-   background_step/index.rst
    background_subtraction/index.rst
    badpix_selfcal/index.rst
    barshadow/index.rst
@@ -41,7 +40,6 @@ Package Index
    linearity/index.rst
    master_background/index.rst
    model_blender/index.rst
-   mrs_imatch/index.rst
    msaflagopen/index.rst
    nsclean/index.rst
    outlier_detection/index.rst

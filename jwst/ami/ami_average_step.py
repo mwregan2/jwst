@@ -1,6 +1,7 @@
-from ..stpipe import Step
-from . import ami_average
 import warnings
+
+from jwst.ami import ami_average
+from jwst.stpipe import Step
 
 __all__ = ["AmiAverageStep"]
 
@@ -48,7 +49,7 @@ class AmiAverageStep(Step):
 
         Returns
         -------
-        result : AmiLgModel object
+        result : `~jwst.datamodels.AmiLgModel`
             Averaged AMI data model
         """
         # Input may be a simple list if run in interactive environment,

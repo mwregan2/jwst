@@ -1,19 +1,19 @@
 """Apply master background corrections to NIRSpec MOS data."""
 
-from stpipe.step import preserve_step_pars
-from jwst.stpipe import record_step_status
+import logging
 
 from stdatamodels.jwst import datamodels
+from stpipe.step import preserve_step_pars
 
-from . import nirspec_utils
-from ..barshadow import barshadow_step
-from ..flatfield import flat_field_step
-from ..pathloss import pathloss_step
-from ..photom import photom_step
-from ..pixel_replace import pixel_replace_step
-from ..resample import resample_spec_step
-from ..extract_1d import extract_1d_step
-from ..stpipe import Pipeline
+from jwst.barshadow import barshadow_step
+from jwst.extract_1d import extract_1d_step
+from jwst.flatfield import flat_field_step
+from jwst.master_background import nirspec_utils
+from jwst.pathloss import pathloss_step
+from jwst.photom import photom_step
+from jwst.pixel_replace import pixel_replace_step
+from jwst.resample import resample_spec_step
+from jwst.stpipe import Pipeline, record_step_status
 
 __all__ = ["MasterBackgroundMosStep"]
 
@@ -30,62 +30,11 @@ GLOBAL_PARS_TO_IGNORE = [
     "suffix",
 ]
 
+log = logging.getLogger(__name__)
+
 
 class MasterBackgroundMosStep(Pipeline):
-    """
-    Apply master background processing to NIRSpec MOS data.
-
-    For MOS, and ignoring FS, the calibration process needs to occur
-    twice: Once to calibrate background slits and create a master background.
-    Then a second time to calibrate science using the master background.
-
-    Attributes
-    ----------
-    correction_pars : dict
-        The master background information from a previous invocation of the step.
-        Keys are:
-
-        - "masterbkg_1d": `~jwst.datamodels.CombinedSpecModel`
-            The 1D version of the master background.
-        - "masterbkg_2d": `~jwst.datamodels.MultiSlitModel`
-            The 2D slit-based version of the master background.
-
-    sigma_clip : None or float
-        Optional factor for sigma clipping outliers when combining background spectra.
-    median_kernel : int
-        Optional user-supplied kernel with which to moving-median boxcar filter
-        the master background spectrum.  Must be an odd integer; even integers will be
-        rounded down to the nearest odd integer.
-    force_subtract : bool
-        Optional user-supplied flag that overrides step logic to force subtraction of the
-        master background.
-        Default is False, in which case the step logic determines if the calspec2 background step
-        has already been applied and, if so, the master background step is skipped.
-        If set to True, the step logic is bypassed and the master background is subtracted.
-    save_background : bool
-        Save computed master background.
-    user_background : None, str, or `~jwst.datamodels.CombinedSpecModel`
-        Optional user-supplied master background 1D spectrum, path to file
-        or opened datamodel
-
-    Notes
-    -----
-    The algorithm is as follows
-
-    - Calibrate all slits
-
-      - For each step
-
-        - Force the source type to be extended source for all slits.
-        - Return the correction array used.
-
-    - Create the 1D master background
-    - For each slit
-
-      - Expand out the 1D master background to match the 2D wavelength grid of the slit
-      - Reverse-calibrate the 2D background, using the correction arrays calculated above.
-      - Subtract the background from the input slit data
-    """
+    """Apply master background processing to NIRSpec MOS data."""
 
     class_alias = "master_background_mos"
 
@@ -117,6 +66,24 @@ class MasterBackgroundMosStep(Pipeline):
         """
         Compute and subtract a master background spectrum.
 
+        For MOS, and ignoring FS, the calibration process needs to occur
+        twice. Once, to calibrate background slits and create a master background.
+        Then, a second time to calibrate science using the master background.
+
+        For repeating or undoing the correction, this step makes use of
+        two special attributes:
+
+            correction_pars : dict
+                The master background information from a previous invocation of the step.
+                Keys are:
+
+                - "masterbkg_1d": `~jwst.datamodels.CombinedSpecModel`
+                    The 1D version of the master background.
+                - "masterbkg_2d": `~jwst.datamodels.MultiSlitModel`
+                    The 2D slit-based version of the master background.
+            use_correction_pars : bool
+                Use the corrections stored in `correction_pars`.
+
         Parameters
         ----------
         data : `~jwst.datamodels.MultiSlitModel`
@@ -126,6 +93,22 @@ class MasterBackgroundMosStep(Pipeline):
         -------
         result : `~jwst.datamodels.MultiSlitModel`
             The background corrected data.
+
+        Notes
+        -----
+        The algorithm is as follows:
+
+            - Calibrate all slits.  For each step:
+
+              - Force the source type to be extended source for all slits.
+              - Return the correction array used.
+
+            - Create the 1D master background
+            - For each slit:
+
+              - Expand out the 1D master background to match the 2D wavelength grid of the slit.
+              - Reverse-calibrate the 2D background, using the correction arrays calculated above.
+              - Subtract the background from the input slit data.
         """
         with datamodels.open(data) as data_model:
             # If some type of background processing had already been done. Abort.
@@ -134,12 +117,12 @@ class MasterBackgroundMosStep(Pipeline):
                 data_model.meta.cal_step.bkg_subtract,
                 data_model.meta.cal_step.master_background,
             ]:
-                self.log.info("Background subtraction has already occurred. Skipping.")
+                log.info("Background subtraction has already occurred. Skipping.")
                 record_step_status(data, "master_background", success=False)
                 return data
 
             if self.user_background:
-                self.log.info(
+                log.info(
                     "Calculating master background from "
                     f"user-supplied background {self.user_background}"
                 )
@@ -148,30 +131,30 @@ class MasterBackgroundMosStep(Pipeline):
                     data_model, user_background
                 )
             elif self.use_correction_pars:
-                self.log.info("Using pre-calculated correction parameters.")
+                log.info("Using pre-calculated correction parameters.")
                 master_background = self.correction_pars["masterbkg_1d"]
                 mb_multislit = self.correction_pars["masterbkg_2d"]
             else:
                 num_bkg, num_src = self._classify_slits(data_model)
                 if num_bkg == 0:
-                    self.log.warning(
+                    log.warning(
                         "No background slits available for creating master background. Skipping"
                     )
                     record_step_status(data, "master_background", False)
                     return data
                 elif num_src == 0:
-                    self.log.warning("No source slits for applying master background. Skipping")
+                    log.warning("No source slits for applying master background. Skipping")
                     record_step_status(data, "master_background", False)
                     return data
 
-                self.log.info("Calculating master background")
+                log.info("Calculating master background")
                 master_background, mb_multislit, bkg_x1d_spectra = self._calc_master_background(
                     data_model, sigma_clip=self.sigma_clip, median_kernel=self.median_kernel
                 )
 
             # Check that a master background was actually determined.
             if master_background is None:
-                self.log.info("No master background could be calculated. Skipping.")
+                log.info("No master background could be calculated. Skipping.")
                 record_step_status(data, "master_background", False)
                 return data
 
@@ -217,10 +200,10 @@ class MasterBackgroundMosStep(Pipeline):
         slits = []
         for slit in pre_calibrated.slits:
             if nirspec_utils.is_background_msa_slit(slit):
-                self.log.info(f"Using background slitlet {slit.source_name}")
+                log.info(f"Using background slitlet {slit.source_name}")
                 slits.append(slit)
         if len(slits) == 0:
-            self.log.warning("No background slitlets found; skipping master bkg correction")
+            log.warning("No background slitlets found; skipping master bkg correction")
             return None
         bkg_model.slits.extend(slits)
         return bkg_model
@@ -231,7 +214,7 @@ class MasterBackgroundMosStep(Pipeline):
 
         Parameters
         ----------
-        data : ~jwst.datamodels.MultiSlitModel`
+        data : `~jwst.datamodels.MultiSlitModel`
             The data to operate on.
 
         Returns
@@ -303,11 +286,11 @@ class MasterBackgroundMosStep(Pipeline):
 
             # Create the 1D, fully calibrated master background.
             if user_background:
-                self.log.debug(f"User background provided {user_background}")
+                log.debug(f"User background provided {user_background}")
                 master_background = user_background
                 bkg_x1d_spectra = None
             else:
-                self.log.info("Creating MOS master background from background slitlets")
+                log.info("Creating MOS master background from background slitlets")
                 bkg_model = self._extend_bg_slits(pre_calibrated)
                 if bkg_model is not None:
                     bkg_model = self.pixel_replace.run(bkg_model)
@@ -319,7 +302,7 @@ class MasterBackgroundMosStep(Pipeline):
                 else:
                     master_background = None
             if master_background is None:
-                self.log.debug("No master background could be calculated. Returning None")
+                log.debug("No master background could be calculated. Returning None")
                 return None, None, None
 
             # Now decalibrate the master background for each individual science slit.

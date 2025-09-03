@@ -1,15 +1,14 @@
-import pytest
 import numpy as np
-
-
+import pytest
 from stdatamodels.jwst import datamodels
-from jwst.background import BackgroundStep
+
+from jwst.background import BackgroundStep, background_sub_soss
 from jwst.background.background_sub_soss import (
+    BACKGROUND_MASK_CUTOFF,
+    SUBSTRIP96_ROWSTART,
     find_discontinuity,
     generate_background_masks,
     subtract_soss_bkg,
-    BACKGROUND_MASK_CUTOFF,
-    SUBSTRIP96_ROWSTART
 )
 
 DETECTOR_SHAPE = (256, 2048)
@@ -37,7 +36,7 @@ def mock_data(generate_background_template):
     rng = np.random.default_rng(seed=42)
     data = rng.normal(0, 1, DETECTOR_SHAPE)
     # ensure all errors are positive and not too close to zero
-    err = err_scaling*(1 + rng.normal(0, 1, DETECTOR_SHAPE)**2)
+    err = err_scaling * (1 + rng.normal(0, 1, DETECTOR_SHAPE) ** 2)
 
     # add NaNs
     num_nans = int(data.size * nan_fraction)
@@ -55,7 +54,7 @@ def mock_data(generate_background_template):
 
     # also add a small background to the data with same structure
     # as the known reference background to see if it will get removed
-    data += generate_background_template*BKG_SCALING
+    data += generate_background_template * BKG_SCALING
 
     return data, err
 
@@ -81,9 +80,12 @@ def generate_soss_cube(mock_data):
 @pytest.fixture(scope="module")
 def generate_soss_cube_substrip96(mock_data):
     cube = datamodels.CubeModel()
-    cube.data = np.array([mock_data[0][SUBSTRIP96_ROWSTART: SUBSTRIP96_ROWSTART + 96, :]] * 10)
-    cube.err = np.array([mock_data[1][SUBSTRIP96_ROWSTART: SUBSTRIP96_ROWSTART + 96, :]] * 10)
+    cube.data = np.array([mock_data[0][SUBSTRIP96_ROWSTART : SUBSTRIP96_ROWSTART + 96, :]] * 10)
+    cube.err = np.array([mock_data[1][SUBSTRIP96_ROWSTART : SUBSTRIP96_ROWSTART + 96, :]] * 10)
     cube.dq = np.isnan(cube.data)
+    cube.meta.instrument.filter = "CLEAR"
+    cube.meta.instrument.pupil = "GR700XD"
+    cube.meta.exposure.type = "NIS_SOSS"
     return cube
 
 
@@ -98,9 +100,7 @@ def test_discontinuity_finder(generate_background_template):
 @pytest.mark.parametrize("n_repeats", [1, 10])
 def test_generate_background_masks(generate_background_template, n_repeats):
     left, right = generate_background_masks(
-        generate_background_template,
-        n_repeats,
-        for_fitting=True
+        generate_background_template, n_repeats, for_fitting=True
     )
     # Test cutoff
     assert np.sum(right[BACKGROUND_MASK_CUTOFF:]) == 0.0
@@ -110,43 +110,67 @@ def test_generate_background_masks(generate_background_template, n_repeats):
 
 
 def test_subtract_soss_bkg(
-        generate_background_template,
-        generate_soss_image,
-        generate_soss_cube,
-        generate_soss_cube_substrip96
+    generate_background_template,
+    generate_soss_image,
+    generate_soss_cube,
+    generate_soss_cube_substrip96,
 ):
-    template_model = datamodels.SossBkgModel(data=np.stack((
-        generate_background_template,
-        generate_background_template
-    )))
+    template_model = datamodels.SossBkgModel(
+        data=np.stack((generate_background_template, generate_background_template))
+    )
 
     # Test image-based correction.
-    result = subtract_soss_bkg(
-        generate_soss_image,
-        template_model,
-        35.,
-        [25.0, 50.0]
-    )
+    result = subtract_soss_bkg(generate_soss_image, template_model, 35.0, [25.0, 50.0])
+    assert result is generate_soss_image
     assert type(result) == type(generate_soss_image)
 
     # Test cube-based correction.
-    result = subtract_soss_bkg(
-        generate_soss_cube,
-        template_model,
-        35.,
-        [25.0, 50.0]
-    )
+    result = subtract_soss_bkg(generate_soss_cube, template_model, 35.0, [25.0, 50.0])
+    assert result is generate_soss_cube
     assert type(result) == type(generate_soss_cube)
 
-    mock_model = generate_soss_cube_substrip96
-    mock_model.meta.instrument.filter = 'CLEAR'
-    mock_model.meta.instrument.pupil = 'GR700XD'
-    mock_model.meta.exposure.type = 'NIS_SOSS'
-
     # Test step-level call along with substrip96-shaped data.
+    mock_model = generate_soss_cube_substrip96
     result = BackgroundStep.call(
         mock_model,
         override_bkg=template_model,
     )
-
     assert type(result) == type(generate_soss_cube_substrip96)
+    assert result is not mock_model
+    assert result.meta.cal_step.bkg_subtract == "COMPLETE"
+    assert mock_model.meta.cal_step.bkg_subtract is None
+
+
+def test_bkg_fail(monkeypatch, caplog, generate_background_template, generate_soss_cube_substrip96):
+    template_model = datamodels.SossBkgModel(
+        data=np.stack((generate_background_template, generate_background_template))
+    )
+    mock_model = generate_soss_cube_substrip96
+
+    # Mock a failure in the background correction
+    monkeypatch.setattr(background_sub_soss, "_rms_error", lambda *args: np.inf)
+
+    result = BackgroundStep.call(
+        mock_model,
+        override_bkg=template_model,
+    )
+    assert result is not mock_model
+    assert result.meta.cal_step.bkg_subtract == "SKIPPED"
+    assert "Template matching failed" in caplog.text
+    assert mock_model.meta.cal_step.bkg_subtract is None
+
+
+def test_bkg_percentile(generate_background_template, generate_soss_cube_substrip96):
+    template_model = datamodels.SossBkgModel(
+        data=np.stack((generate_background_template, generate_background_template))
+    )
+    mock_model = generate_soss_cube_substrip96
+
+    # provide background percentile in arguments -
+    # should still complete successfully
+    result = BackgroundStep.call(
+        mock_model, override_bkg=template_model, soss_bkg_percentile=[5.0, 95.0]
+    )
+    assert result is not mock_model
+    assert result.meta.cal_step.bkg_subtract == "COMPLETE"
+    assert mock_model.meta.cal_step.bkg_subtract is None

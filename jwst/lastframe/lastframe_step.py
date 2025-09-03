@@ -1,15 +1,20 @@
+import logging
+
 from stdatamodels.jwst import datamodels
-from ..stpipe import Step
-from . import lastframe_sub
+
+from jwst.lastframe import lastframe_sub
+from jwst.stpipe import Step
 
 __all__ = ["LastFrameStep"]
+
+log = logging.getLogger(__name__)
 
 
 class LastFrameStep(Step):
     """
     Set data quality flags for the last group in MIRI ramps.
 
-    A MIRI specific task.  If the number of groups > 2, the GROUP
+    If the number of groups > 2, the GROUP
     data quality flag for the final group will be set to DO_NOT_USE.
     """
 
@@ -38,8 +43,8 @@ class LastFrameStep(Step):
             detector = input_model.meta.instrument.detector
 
             if detector[:3] != "MIR":
-                self.log.warning("Last Frame Correction is only for MIRI data")
-                self.log.warning("Last frame step will be skipped")
+                log.warning("Last Frame Correction is only for MIRI data")
+                log.warning("Last frame step will be skipped")
                 input_model.meta.cal_step.lastframe = "SKIPPED"
                 return input_model
 

@@ -1,5 +1,7 @@
 import numpy as np
 
+__all__ = ["NSClean", "make_lowpass_filter", "med_abs_deviation", "NSCleanSubarray"]
+
 
 class NSClean:
     """
@@ -108,6 +110,9 @@ class NSClean:
             )
         # Illuminated areas carry no weight
         self.p_matrix = np.where(self.mask, self.p_matrix, 0.0)
+
+        # Set bad weights to zero
+        self.p_matrix[~np.isfinite(self.p_matrix)] = 0.0
 
         # Build a 1-dimensional Gaussian kernel for "buffing". Buffing is in the
         # dispersion direction only. In detector coordinates, this is axis zero.
@@ -235,7 +240,7 @@ class NSClean:
 
         Parameters
         ----------
-        data : array_like
+        data : array-like
             The input data. This should be the normal end result of Stage 1 processing.
 
         buff : bool
@@ -244,7 +249,7 @@ class NSClean:
 
         Returns
         -------
-        data : array_like
+        data : array-like
             The data, but with less striping and the background subtracted.
         """
         # Transform the data to detector space with the IRS2 zipper running along the bottom.
@@ -532,7 +537,12 @@ class NSCleanSubarray:
                 p_matrix = 1 / np.fft.irfft(
                     np.fft.rfft(np.array(_m, dtype=np.float32)) * _weight_fft, self.n
                 )  # Compute weights
-            p_matrix = p_matrix[_m]  # Keep only background samples
+
+            # Keep only background samples
+            p_matrix = p_matrix[_m]
+
+            # Set bad weights to zero
+            p_matrix[~np.isfinite(p_matrix)] = 0.0
 
             # NSClean's weighting requires the Moore-Penrose inverse of A = P*B.
             #     $A^+ = (A^H A)^{-1} A^H$

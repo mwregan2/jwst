@@ -1,8 +1,11 @@
+import logging
 import warnings
-from ..stpipe import Step
-from . import badpix_selfcal
+
 import numpy as np
+
 from jwst import datamodels as dm
+from jwst.badpix_selfcal import badpix_selfcal
+from jwst.stpipe import Step
 
 __all__ = ["BadpixSelfcalStep"]
 
@@ -10,6 +13,8 @@ __all__ = ["BadpixSelfcalStep"]
 # the pedestal dark.  Format is (Y1, Y2, X1, X2)
 PEDESTAL_INDX_MIRIFULONG = (50, 974, 474, 507)
 PEDESTAL_INDX_MIRIFUSHORT = (50, 974, 503, 516)
+
+log = logging.getLogger(__name__)
 
 
 class BadpixSelfcalStep(Step):
@@ -107,10 +112,10 @@ class BadpixSelfcalStep(Step):
         # ensure that there are background exposures to use, otherwise skip the step
         # unless forced
         if (len(selfcal_list + bkg_list) == 0) and (not self.force_single):
-            self.log.warning(
+            log.warning(
                 "No selfcal or background exposures provided for self-calibration. Skipping step."
             )
-            self.log.info(
+            log.info(
                 "If you want to force self-calibration with the science "
                 "exposure alone (generally not recommended), set force_single=True."
             )
@@ -121,7 +126,7 @@ class BadpixSelfcalStep(Step):
         try:
             dispaxis = input_sci.meta.wcsinfo.dispersion_direction
         except AttributeError:
-            self.log.warning(
+            log.warning(
                 "Dispersion axis not found in input science image metadata. "
                 "Kernel for self-calibration will be two-dimensional."
             )
@@ -168,7 +173,7 @@ class BadpixSelfcalStep(Step):
         # apply the flags to the science data
         input_sci = badpix_selfcal.apply_flags(input_sci, bad_indices)
 
-        self.log.info(f"Number of new bad pixels flagged: {len(bad_indices[0])}")
+        log.info(f"Number of new bad pixels flagged: {len(bad_indices[0])}")
         # apply the flags to the background data to be passed to background sub step
         if len(bkg_list) > 0:
             for i, background_model in enumerate(bkg_list):

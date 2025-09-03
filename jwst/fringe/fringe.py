@@ -3,10 +3,12 @@
 #
 
 import logging
+
 import numpy as np
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+
+__all__ = ["do_correction", "apply_fringe"]
 
 
 def do_correction(input_model, fringe_model):
@@ -51,7 +53,7 @@ def apply_fringe(input_model, fringe):
 
     Returns
     -------
-    output_model : jwst.datamodel.IFUImageModel
+    output_model : `~jwst.datamodels.IFUImageModel`
         Input science data model which has been fringe-corrected.
     """
     # Initialize the output model as a copy of the input

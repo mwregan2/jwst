@@ -16,6 +16,7 @@ News fragment change types
 - ``<PR#>.scripts.rst``
 - ``<PR#>.set_telescope_pointing.rst``
 - ``<PR#>.pipeline.rst``
+- ``<PR#>.associations.rst``
 
 Stage 1
 ^^^^^^^
@@ -71,7 +72,6 @@ Stage 3
 ^^^^^^^
 
 - ``<PR#>.assign_mtwcs.rst``
-- ``<PR#>.mrs_imatch.rst``
 - ``<PR#>.tweakreg.rst``
 - ``<PR#>.skymatch.rst``
 - ``<PR#>.exp_to_source.rst``

@@ -1,16 +1,15 @@
 import logging
 
-from stdatamodels.jwst import datamodels as dm
 from stdatamodels import filetype
-from jwst.datamodels import ModelLibrary, ImageModel  # type: ignore[attr-defined]
-from jwst.lib.pipe_utils import match_nans_and_flags
-from jwst.resample.resample_utils import load_custom_wcs
+from stdatamodels.jwst import datamodels as dm
 
-from . import resample
-from ..stpipe import Step
+from jwst.datamodels import ImageModel, ModelLibrary  # type: ignore[attr-defined]
+from jwst.lib.pipe_utils import match_nans_and_flags
+from jwst.resample import resample
+from jwst.resample.resample_utils import load_custom_wcs
+from jwst.stpipe import Step
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
 
 __all__ = ["ResampleStep"]
 
@@ -20,14 +19,7 @@ GOOD_BITS = "~DO_NOT_USE+NON_SCIENCE"
 
 
 class ResampleStep(Step):
-    """
-    Resample imaging data onto a regular grid using the drizzle algorithm.
-
-    .. note::
-        When supplied via ``output_wcs``, a custom WCS overrides other custom
-        WCS parameters such as ``output_shape`` (now computed from by
-        ``output_wcs.bounding_box``), ``crpix``
-    """
+    """Resample imaging data onto a regular grid using the drizzle algorithm."""
 
     class_alias = "resample"
 
@@ -42,7 +34,7 @@ class ResampleStep(Step):
         rotation = float(default=None)  # Output image Y-axis PA relative to North
         pixel_scale_ratio = float(default=1.0)  # Ratio of output to input pixel scale.
         pixel_scale = float(default=None)  # Absolute pixel scale in arcsec
-        output_wcs = string(default='')  # Custom output WCS
+        output_wcs = string(default='')  # Custom output WCS. Overrides other WCS parameters if provided.
         single = boolean(default=False)  # Resample each input to its own output grid
         blendheaders = boolean(default=True)  # Blend metadata from inputs into output
         in_memory = boolean(default=True)  # Keep images in memory
@@ -68,6 +60,12 @@ class ResampleStep(Step):
         ModelLibrary or ImageModel
             The final output data. If the `single` parameter is set to True, then this
             is a single ImageModel; otherwise, it is a ModelLibrary.
+
+        Notes
+        -----
+        When supplied via ``output_wcs``, a custom WCS overrides other custom
+        WCS parameters such as ``output_shape`` (now computed from by
+        ``output_wcs.bounding_box``) and ``crpix``.
         """
         if isinstance(input_data, str):
             ext = filetype.check(input_data)
@@ -217,6 +215,6 @@ class ResampleStep(Step):
 
         # Report values to processing log
         for k, v in kwargs.items():
-            self.log.debug(f"   {k}={v}")
+            log.debug(f"   {k}={v}")
 
         return kwargs

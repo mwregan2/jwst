@@ -18,10 +18,7 @@ import sys
 from pathlib import Path
 
 import tomllib
-from packaging.version import Version
 from configparser import ConfigParser
-
-import sphinx
 
 from stpipe import Step
 from sphinx.ext.autodoc import AttributeDocumenter
@@ -68,8 +65,6 @@ sys.path.insert(0, os.path.abspath('exts/'))
 with open(Path(__file__).parent.parent / "pyproject.toml", "rb") as metadata_file:
     metadata = tomllib.load(metadata_file)['project']
 
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-
 # Configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
@@ -77,9 +72,11 @@ intersphinx_mapping = {
     'scipy': ('https://scipy.github.io/devdocs', None),
     'matplotlib': ('https://matplotlib.org/', None),
     'astropy': ('https://docs.astropy.org/en/stable/', None),
+    'photutils': ('https://photutils.readthedocs.io/en/stable/', None),
     'gwcs': ('https://gwcs.readthedocs.io/en/stable/', None),
     'stdatamodels': ('https://stdatamodels.readthedocs.io/en/latest/', None),
     'stcal': ('https://stcal.readthedocs.io/en/latest/', None),
+    'stpipe': ('https://stpipe.readthedocs.io/en/latest/', None),
     'drizzle': ('https://drizzlepac.readthedocs.io/en/latest/', None),
     'tweakwcs': ('https://tweakwcs.readthedocs.io/en/latest/', None),
 }
@@ -92,6 +89,7 @@ intersphinx_mapping = {
 # ones.
 extensions = [
     'numfig',
+    'numpydoc',
     'sphinxcontrib.jquery',
     'pytest_doctestplus.sphinx.doctestplus',
     'sphinx.ext.autodoc',
@@ -101,16 +99,12 @@ extensions = [
     'sphinx.ext.inheritance_diagram',
     'sphinx.ext.viewcode',
     'sphinx.ext.autosummary',
-    'sphinx.ext.napoleon',
     'sphinx_automodapi.automodapi',
     'sphinx_automodapi.automodsumm',
     'sphinx_automodapi.autodoc_enhancements',
     'sphinx_automodapi.smart_resolver',
-    'sphinx.ext.imgmath',
+    'sphinx.ext.mathjax',
 ]
-
-if on_rtd:
-    extensions.append('sphinx.ext.mathjax')
 
 # Add any paths that contain templates here, relative to this directory.
 # templates_path = ['_templates']
@@ -220,12 +214,6 @@ pygments_style = 'default'
 # If true, keep warnings as "system message" paragraphs in the built documents.
 # keep_warnings = False
 
-# Mapping for links to the ASDF Standard in ASDF schema documentation
-asdf_schema_reference_mappings = [
-    ('tag:stsci.edu:asdf',
-     'http://asdf-standard.readthedocs.io/en/latest/generated/stsci.edu/asdf/'),
-]
-
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -269,6 +257,8 @@ html_logo = '_static/stsci_pri_combo_mark_white.png'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 
+html_static_path = ["_static"]
+html_css_files = ["custom.css"]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -463,6 +453,22 @@ epub_exclude_files = ['search.html']
 
 # If false, no index is generated.
 # epub_use_index = True
+
+# - ----------------------------------------------
+
+# linkcheck
+linkcheck_retry = 5
+linkcheck_ignore = [
+    "http://stsci.edu/schemas/fits-schema/",  # Old schema from CHANGES.rst
+    "https://jwst-docs.stsci.edu",  # CI blocked by service provider
+    "https://outerspace.stsci.edu",  # CI blocked by service provider
+    "https://jira.stsci.edu/",  # Internal access only
+    r"https://github\.com/spacetelescope/jwst/(?:issues|pull)/\d+",
+]
+linkcheck_timeout = 180
+linkcheck_anchors = False
+linkcheck_report_timeouts_as_broken = True
+linkcheck_allow_unauthorized = False
 
 # Enable nitpicky mode - which ensures that all references in the docs
 # resolve.

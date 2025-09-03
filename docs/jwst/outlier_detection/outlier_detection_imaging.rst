@@ -6,7 +6,7 @@ Imaging Data
 This module serves as the interface for applying ``outlier_detection`` to direct
 image observations, like those taken with MIRI, NIRCam, and NIRISS.
 A :ref:`Stage 3 association <asn-level3-techspecs>`,
-which is loaded into a :py:class:`~jwst.datamodels.ModelLibrary` object,
+which is loaded into a :py:class:`~jwst.datamodels.library.ModelLibrary` object,
 serves as the basic format for all processing performed by this step.
 This routine performs the following operations:
 
@@ -25,9 +25,9 @@ This routine performs the following operations:
      a separate grouped mosaic, so only a single exposure ever contributes to each pixel in these mosaics.
      An explanation of how all NIRCam multiple detector group mosaics are
      defined from `a single exposure or from a dithered set of exposures
-     <https://jwst-docs.stsci.edu/near-infrared-camera/nircam-operations/nircam-dithers-and-mosaics>`_
+     <https://jwst-docs.stsci.edu/jwst-near-infrared-camera/nircam-operations/nircam-dithers-and-mosaics>`_
      can be found here.
-   * Fill in pixels that have no valid contribution from any input exposure with the value 
+   * Fill in pixels that have no valid contribution from any input exposure with the value
      specified by the ``fillval`` parameter.
 
 #. If the ``save_intermediate_results`` parameter is set to True, write the resampled images to disk
@@ -46,7 +46,7 @@ This routine performs the following operations:
    If ``save_intermediate_results`` is set to True, the median image is written out to disk with the
    suffix ``_median.fits``.
 
-#. Blot (inverse of resampling) the median image back to match each original input image, and write 
+#. Blot (inverse of resampling) the median image back to match each original input image, and write
    the blotted images to disk with the suffix ``_blot.fits`` if ``save_intermediate_results`` is `True`.
 
 #. Perform statistical comparison between blotted image and original image to identify outliers.
@@ -93,7 +93,7 @@ final output product.  Specifically,
 
 #. The resample step creates an output product that is the
    same size as the final output product, which for imaging modes can span all detectors
-   while also accounting for all dithers. Although only a single resampled image is needed in 
+   while also accounting for all dithers. Although only a single resampled image is needed in
    memory at a time, for some Level 3 products, each resampled image can be on the order of several
    gigabytes in size.
 
@@ -107,10 +107,10 @@ Control over this memory model happens
 with the use of the ``in_memory`` parameter, which defaults to True.
 The full impact of setting this parameter to `False` includes:
 
-#. The input :py:class:`~jwst.datamodels.ModelLibrary` object is loaded with `on_disk=True`.
+#. The input :py:class:`~jwst.datamodels.library.ModelLibrary` object is loaded with `on_disk=True`.
    This ensures that input models are loaded into memory one at at time,
    and saved to a temporary file when not in use; these read-write operations are handled internally by
-   the :py:class:`~jwst.datamodels.ModelLibrary` object.
+   the :py:class:`~jwst.datamodels.library.ModelLibrary` object.
 
 #. Computing the median image works by writing the resampled data frames to appendable files
    on disk that are split into sections spatially but contain the entire ``groups``

@@ -1,7 +1,6 @@
 """Utilities for re-organizing spectral products into a flat structure."""
 
 import logging
-import warnings
 from copy import deepcopy
 
 import numpy as np
@@ -9,7 +8,17 @@ from asdf.tags.core.ndarray import asdf_datatype_to_numpy_dtype
 from stdatamodels.jwst import datamodels
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+
+__all__ = [
+    "determine_vector_and_meta_columns",
+    "make_empty_recarray",
+    "populate_recarray",
+    "set_schema_units",
+    "copy_column_units",
+    "copy_spec_metadata",
+    "expand_table",
+    "expand_flat_spec",
+]
 
 
 def determine_vector_and_meta_columns(input_datatype, output_datatype):
@@ -32,9 +41,9 @@ def determine_vector_and_meta_columns(input_datatype, output_datatype):
 
     Returns
     -------
-    columns : np.ndarray[tuple]
+    columns : ndarray[tuple]
         Array of tuples containing the column names and their dtypes.
-    is_vector : np.ndarray[bool]
+    is_vector : ndarray[bool]
         Array of booleans indicating whether each column is vector-like,
         same length as `columns`.
     """
@@ -63,13 +72,13 @@ def make_empty_recarray(n_rows, n_spec, columns, is_vector, defaults=0):
         data points for any spectrum in the exposure.
     n_spec : int
         The number of spectra in the output table.
-    columns : np.ndarray[tuple]
+    columns : ndarray[tuple]
         Array of tuples containing the column names and their dtypes.
-    is_vector : np.ndarray[bool]
+    is_vector : ndarray[bool]
         Array of booleans indicating whether each column is vector-like.
         If `True`, the column will be a 1D array of length `n_rows`.
         Otherwise, the column will be a scalar.
-    defaults : list, np.ndarray, int, or float, optional
+    defaults : list, ndarray, int, or float, optional
         List of default values for each column. If a column is vector-like,
         the default value will be repeated to fill the array.
         If a column is scalar, the default value will be used directly.
@@ -103,7 +112,7 @@ def make_empty_recarray(n_rows, n_spec, columns, is_vector, defaults=0):
     return arr
 
 
-def populate_recarray(output_table, input_spec, n_rows, columns, is_vector, ignore_columns=None):
+def populate_recarray(output_table, input_spec, columns, is_vector, ignore_columns=None):
     """
     Populate the output table in-place with data from the input spectrum.
 
@@ -118,12 +127,9 @@ def populate_recarray(output_table, input_spec, n_rows, columns, is_vector, igno
         The output table to be populated with the spectral data.
     input_spec : `~jwst.datamodels.SpecModel` or `~jwst.datamodels.CombinedSpecModel`
         The input data model containing the spectral data.
-    n_rows : int
-        The number of rows in the output table; this is the maximum number of
-        data points for any spectrum in the exposure.
-    columns : np.ndarray[tuple]
+    columns : ndarray[tuple]
         Array of tuples containing the column names and their dtypes.
-    is_vector : np.ndarray[bool]
+    is_vector : ndarray[bool]
         Array of booleans indicating whether each column is vector-like,
     ignore_columns : list[str], optional
         List of column names to ignore when copying data or metadata from the input
@@ -138,17 +144,12 @@ def populate_recarray(output_table, input_spec, n_rows, columns, is_vector, igno
     vector_columns = columns[is_vector]
     meta_columns = columns[~is_vector]
 
-    # Copy the data into the new table with NaN padding
+    # Copy the data into the new table
     for col, _ in vector_columns:
         if col in ignore_columns:
             continue
-        padded_data = np.full(n_rows, np.nan)
-        padded_data[: input_table.shape[0]] = input_table[col]
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore", category=RuntimeWarning, message="invalid value encountered in cast"
-            )
-            output_table[col] = padded_data
+
+        output_table[col][: input_table.shape[0]] = input_table[col]
 
     # Copy the metadata into the new table
     # Metadata columns must have identical names to spec_meta columns

@@ -1,30 +1,25 @@
-from copy import deepcopy
 import logging
 import math
+from copy import deepcopy
 
 import asdf
 import numpy as np
 from astropy import units as u
-
-from stdatamodels.jwst.datamodels.dqflags import pixel
 from astropy.coordinates import SkyCoord
-
+from gwcs import wcstools
 from stcal.alignment.util import (
+    compute_s_region_keyword,
     compute_scale,
     wcs_from_sregions,
 )
-from gwcs import wcstools
-
-from stcal.alignment.util import compute_s_region_keyword
 from stcal.resample import UnsupportedWCSError
-from stcal.resample.utils import compute_mean_pixel_area
 from stcal.resample.utils import build_mask as _stcal_build_mask
-
+from stcal.resample.utils import compute_mean_pixel_area
+from stdatamodels.jwst.datamodels.dqflags import pixel
 
 __all__ = ["build_mask", "resampled_wcs_from_models"]
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
 
 
 def resampled_wcs_from_models(
@@ -41,8 +36,8 @@ def resampled_wcs_from_models(
 
     Parameters
     ----------
-    input_models : `~jwst.datamodel.ModelLibrary`
-        Each datamodel must have a ``model.meta.wcs`` set to a ~gwcs.WCS object.
+    input_models : `~jwst.datamodels.library.ModelLibrary`
+        Each datamodel must have a ``model.meta.wcs`` set to a `~gwcs.wcs.WCS` object.
     pixel_scale_ratio : float, optional
         Desired pixel scale ratio defined as the ratio of the desired output
         pixel scale to the first input model's pixel scale computed from this
@@ -75,7 +70,7 @@ def resampled_wcs_from_models(
 
     Returns
     -------
-    wcs : ~gwcs.wcs.WCS
+    wcs : `~gwcs.wcs.WCS`
         The WCS object corresponding to the combined input footprints.
     pscale_in : float
         Computed pixel scale (in degrees) of the first input image.
@@ -86,17 +81,20 @@ def resampled_wcs_from_models(
     """
     # build a list of WCS of all input models:
     sregion_list = []
-    ref_wcs = None
 
     with input_models:
-        for model in input_models:
-            if ref_wcs is None:
-                ref_wcsinfo = model.meta.wcsinfo.instance
-                ref_wcs = deepcopy(model.meta.wcs)
-                shape = model.data.shape
+        # take WCS from example model since that is not read by read_metadata
+        example_model = input_models.borrow(0)
+        ref_wcsinfo = example_model.meta.wcsinfo.instance
+        ref_wcs = deepcopy(example_model.meta.wcs)
+        shape = example_model.data.shape
+        input_models.shelve(example_model, 0, modify=False)
+        del example_model
 
-            sregion_list.append(model.meta.wcsinfo.s_region)
-            input_models.shelve(model, modify=False)
+        # get s_regions from model meta without loading the whole models into memory
+        for i in range(len(input_models)):
+            meta = input_models.read_metadata(i)
+            sregion_list.append(meta["meta.wcsinfo.s_region"])
 
     if not sregion_list:
         raise ValueError("No input models.")
@@ -166,7 +164,7 @@ def is_sky_like(frame):
 
     Parameters
     ----------
-    frame : gwcs.WCS
+    frame : gwcs.wcs.WCS
         WCS object to check.
 
     Returns
@@ -253,7 +251,7 @@ def find_miri_lrs_sregion(sregion_model1, wcs):
     ----------
     sregion_model1 : str
         The s_regions of the first input model
-    wcs : gwcs.WCS
+    wcs : gwcs.wcs.WCS
         Spatial/spectral WCS.
 
     Returns

@@ -1,25 +1,25 @@
 """JWST-specific Step and Pipeline base classes."""
 
-from functools import wraps
 import logging
-import warnings
+from functools import wraps
 from pathlib import Path
 
-from stdatamodels.jwst.datamodels import JwstDataModel, read_metadata
 from stdatamodels.jwst import datamodels
-from stpipe import crds_client, Step, Pipeline
+from stdatamodels.jwst.datamodels import JwstDataModel, read_metadata
+from stpipe import Pipeline, crds_client
+from stpipe import Step as _Step
 
-from jwst import __version_commit__, __version__
-from jwst.datamodels import ModelLibrary, ModelContainer
-from ._cal_logs import _LOG_FORMATTER
-from ..lib.suffix import remove_suffix
-
+from jwst import __version__, __version_commit__
+from jwst.datamodels import ModelContainer, ModelLibrary
+from jwst.lib.suffix import remove_suffix
+from jwst.stpipe._cal_logs import _LOG_FORMATTER
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+
+__all__ = ["JwstStep", "JwstPipeline"]
 
 
-class JwstStep(Step):
+class JwstStep(_Step):
     """A JWST pipeline step."""
 
     spec = """
@@ -86,7 +86,7 @@ class JwstStep(Step):
         Load object as an association.
 
         Loads the specified object into a Level2 association.
-        If necessary, prepend `Step.input_dir` to all members.
+        If necessary, prepend ``Step.input_dir`` to all members.
 
         Parameters
         ----------
@@ -95,12 +95,12 @@ class JwstStep(Step):
 
         Returns
         -------
-        association : jwst.associations.lib.rules_level2_base.DMSLevel2bBase
-            Association
+        association : object
+            Association from ``jwst.associations.lib.rules_level2_base.DMSLevel2bBase``
         """
         # Prevent circular import:
-        from ..associations.load_as_asn import LoadAsLevel2Asn
-        from ..associations.lib.update_path import update_key_value
+        from jwst.associations.lib.update_path import update_key_value
+        from jwst.associations.load_as_asn import LoadAsLevel2Asn
 
         asn = LoadAsLevel2Asn.load(obj, basename=self.output_file)
         update_key_value(asn, "expname", (), mod_func=self.make_input_path)
@@ -111,7 +111,7 @@ class JwstStep(Step):
         Load object as an association.
 
         Loads the specified object into a Level3 association.
-        If necessary, prepend `Step.input_dir` to all members.
+        If necessary, prepend ``Step.input_dir`` to all members.
 
         Parameters
         ----------
@@ -120,12 +120,12 @@ class JwstStep(Step):
 
         Returns
         -------
-        association : jwst.associations.lib.rules_level3_base.DMS_Level3_Base
-            Association
+        association : object
+            Association from ``jwst.associations.lib.rules_level3_base.DMS_Level3_Base``
         """
         # Prevent circular import:
-        from ..associations.load_as_asn import LoadAsAssociation
-        from ..associations.lib.update_path import update_key_value
+        from jwst.associations.lib.update_path import update_key_value
+        from jwst.associations.load_as_asn import LoadAsAssociation
 
         asn = LoadAsAssociation.load(obj)
         update_key_value(asn, "expname", (), mod_func=self.make_input_path)
@@ -137,7 +137,7 @@ class JwstStep(Step):
 
         Parameters
         ----------
-        result : `~jwst.datamodels.DataModel`
+        result : `~stdatamodels.DataModel`
             The output data model to be updated.
         reference_files_used : list of tuple
             The names and file paths of reference files used.
@@ -178,7 +178,7 @@ class JwstStep(Step):
         """
         return remove_suffix(name)
 
-    @wraps(Step.run)
+    @wraps(_Step.run)
     def run(self, *args, **kwargs):
         """
         Run the step.
@@ -200,21 +200,6 @@ class JwstStep(Step):
             log.info(f"Results used jwst version: {__version__}")
         return result
 
-    @wraps(Step.__call__)
-    def __call__(self, *args, **kwargs):  # numpydoc ignore=RT01
-        """Deprecated method. Use `run` instead."""  # noqa: D401
-        if not self.parent:
-            warnings.warn(
-                "Step.__call__ is deprecated. It is equivalent to Step.run "
-                "and is not recommended. See "
-                "https://jwst-pipeline.readthedocs.io/en/latest/jwst/"
-                "user_documentation/running_pipeline_python.html"
-                "#advanced-use-pipeline-run-vs-pipeline-call for more details.",
-                UserWarning,
-                stacklevel=2,
-            )
-        return super().__call__(*args, **kwargs)
-
 
 class JwstPipeline(Pipeline, JwstStep):
     """
@@ -231,7 +216,7 @@ class JwstPipeline(Pipeline, JwstStep):
 
         Parameters
         ----------
-        result : `~jwst.datamodels.DataModel`
+        result : `~stdatamodels.DataModel`
             The output data model to be updated.
         _reference_files_used : list of tuple
             The names and file paths of reference files used.

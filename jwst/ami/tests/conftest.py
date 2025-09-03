@@ -1,15 +1,12 @@
 """Fixtures for AMI tests."""
 
-import pytest
 import numpy as np
-from jwst.stpipe import Step
+import pytest
 import stdatamodels.jwst.datamodels as dm
-from jwst.ami.bp_fix import filthp_d, calc_pupil_support
 
-
-PXSC_DEG = 65.6 / (60.0 * 60.0 * 1000)
-PXSC_RAD = PXSC_DEG * np.pi / (180)
-PXSC_MAS = PXSC_DEG * 3600 * 1000
+from jwst.ami.bp_fix import calc_pupil_support, filthp_d
+from jwst.ami.tests.helpers import PXSC_RAD
+from jwst.stpipe import Step
 
 
 @pytest.fixture(scope="package")
@@ -45,6 +42,7 @@ def example_model():
     model.meta.visit.start_time = "2022-06-05 12:15:41.5020000"
     model.meta.wcsinfo.roll_ref = 171.8779402866089
     model.meta.wcsinfo.v3yangle = 0.56126717
+    model.meta.wcsinfo.vparity = 1
     model.meta.filename = "test_calints.fits"
     model.meta.instrument.pupil = "NRM"
     model.meta.exposure.type = "NIS_AMI"
@@ -67,7 +65,7 @@ def circular_pupil():
 
     Returns
     -------
-    np.ndarray
+    ndarray
         A 1024x1024 array with a circular pupil of radius 0.2x the array shape.
     """
     shape = (1024, 1024)
@@ -117,7 +115,7 @@ def nrm_psf(example_model, nrm_model):
 
     Returns
     -------
-    psf : np.ndarray
+    psf : ndarray
         The PSF computed from the nrm model.
     """
     filt = example_model.meta.instrument.filter
@@ -132,7 +130,7 @@ def bandpass(example_model):
 
     Returns
     -------
-    np.ndarray
+    ndarray
         An Nx2 array with the first column being the throughput and the second
         column being the wavelength in meters.
     """

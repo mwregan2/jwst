@@ -2,27 +2,23 @@
 
 import logging
 import warnings
-import numpy as np
 
+import numpy as np
+from astropy.constants import c
 from astropy.coordinates import SkyCoord
 from astropy.modeling import models as astmodels
 from astropy.table import QTable
-from astropy.constants import c
-
 from gwcs import WCS
-from gwcs.wcstools import grid_from_bounding_box
 from gwcs import utils as gwutils
-from stpipe.exceptions import StpipeExitException
-from stcal.alignment.util import compute_s_region_keyword, compute_s_region_imaging
-
-from stdatamodels.jwst.datamodels import WavelengthrangeModel, MiriLRSSpecwcsModel
+from gwcs.wcstools import grid_from_bounding_box
+from stcal.alignment.util import compute_s_region_imaging, compute_s_region_keyword
+from stdatamodels.jwst.datamodels import MiriLRSSpecwcsModel, WavelengthrangeModel
 from stdatamodels.jwst.transforms.models import GrismObject
+from stpipe.exceptions import StpipeExitException
 
 from jwst.lib.catalog_utils import SkyObject
 
-
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
 
 
 _MAX_SIP_DEGREE = 6
@@ -1003,7 +999,7 @@ def in_ifu_slice(slice_wcs, ra, dec, lam):
 
     Parameters
     ----------
-    slice_wcs : `~gwcs.WCS`
+    slice_wcs : `~gwcs.wcs.WCS`
         Slice WCS object.
     ra, dec, lam : float, ndarray
         Physical Coordinates.
@@ -1060,7 +1056,7 @@ def update_fits_wcsinfo(
 
     Parameters
     ----------
-    datamodel : `ImageModel`
+    datamodel : `~jwst.datamodels.ImageModel`
         The input data model for imaging or WFSS mode whose ``meta.wcsinfo``
         field should be updated from GWCS. By default, ``datamodel.meta.wcs``
         is used to compute FITS WCS + SIP approximation. When ``imwcs`` is
@@ -1119,7 +1115,7 @@ def update_fits_wcsinfo(
         reference_api.html#module-astropy.modeling.projections>`_
         projection models inherited from
         :py:class:`~astropy.modeling.projections.Pix2SkyProjection`.
-    imwcs : `gwcs.WCS`, None, optional
+    imwcs : `gwcs.wcs.WCS`, None, optional
         Imaging GWCS object for WFSS mode whose FITS WCS approximation should
         be computed and stored in the ``datamodel.meta.wcsinfo`` field.
         When ``imwcs`` is `None` then WCS from ``datamodel.meta.wcs``

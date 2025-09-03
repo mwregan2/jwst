@@ -1,11 +1,14 @@
 from __future__ import annotations
+
 import warnings
 
 import numpy as np
-
-from jwst.datamodels import IFUImageModel  # type: ignore[attr-defined]
 from stcal.outlier_detection.utils import medfilt
 from stdatamodels.jwst.datamodels.dqflags import pixel
+
+from jwst.datamodels import IFUImageModel  # type: ignore[attr-defined]
+
+__all__ = ["badpix_selfcal", "apply_flags"]
 
 
 def badpix_selfcal(
@@ -20,7 +23,7 @@ def badpix_selfcal(
 
     Parameters
     ----------
-    minimg : np.ndarray
+    minimg : ndarray
         Selfcal data of shape (x, y), i.e., after some operation has
         already been taken to combine multiple exposures,
         typically a MIN operation.
@@ -36,7 +39,7 @@ def badpix_selfcal(
 
     Returns
     -------
-    flagged_indices : np.ndarray
+    flagged_indices : ndarray
         Indices of the flagged pixels,
         shaped like output from np.where
     """
@@ -77,7 +80,7 @@ def apply_flags(input_model: IFUImageModel, flagged_indices: np.ndarray) -> IFUI
     ----------
     input_model : IFUImageModel
         Input science data to be corrected
-    flagged_indices : np.ndarray
+    flagged_indices : ndarray
         Indices of the flagged pixels,
         shaped like output from np.where
 
