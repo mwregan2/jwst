@@ -55,6 +55,7 @@ class JumpStep(Step):
         minimum_sigclip_groups = integer(default=100) # The minimum number of groups to switch to sigma clipping
         only_use_ints = boolean(default=True) # In sigclip only compare the same group across ints, if False compare all groups
         write_saturated_cores = boolean(default=False) # Write the saturated cores to disk
+        output_directory = string(default='./') # The output directory to write the saturation mask files
     """  # noqa: E501
 
 
@@ -169,7 +170,10 @@ class JumpStep(Step):
 
         # Instantiate a JumpData class and populate it based on the input RampModel.
         jump_data = JumpData(result, gain_2d, rnoise_2d, dqflags.pixel)
-
+        if self.parent:
+            fits_location = self.parent.output_dir
+        else:
+            fits_location = self.output_dir
         jump_data.set_detection_settings(
             self.rejection_threshold,
             self.three_group_rejection_threshold,
@@ -193,6 +197,7 @@ class JumpStep(Step):
         )
 
         sat_expand = self.sat_expand * 2
+        print("fits_location", fits_location)
         jump_data.set_snowball_info(
             self.expand_large_events,
             self.min_jump_area,
@@ -202,6 +207,12 @@ class JumpStep(Step):
             self.min_sat_radius_extend,
             sat_expand,
             self.edge_size,
+            self.write_saturated_cores,
+            self.mask_snowball_core_next_int,
+            result.meta.instrument.detector,
+            result.meta.exposure.start_time,
+            result.meta.exposure.end_time,
+            fits_location + '/',
         )
 
         max_extended_radius = self.max_extended_radius * 2
