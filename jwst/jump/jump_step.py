@@ -97,7 +97,7 @@ class JumpStep(Step):
             # Detect jumps using a copy of the input data model.
             result = input_model.copy()
             jump_data = self._setup_jump_data(result)
-            new_gdq, new_pdq, number_crs, number_extended_events, stddev = detect_jumps_data(
+            new_gdq, new_pdq, number_crs, number_extended_events = detect_jumps_data(
                 jump_data
             )
 
