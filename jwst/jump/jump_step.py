@@ -37,7 +37,7 @@ class JumpStep(Step):
         use_ellipses = boolean(default=False) # deprecated
         sat_required_snowball = boolean(default=True) # Require the center of snowballs to be saturated
         min_sat_radius_extend = float(default=2.5) # The min radius of the sat core to trigger the extension of the core
-        sat_expand = integer(default=2) # Number of pixels to add to the radius of the saturated core of snowballs
+        sat_expand = float(default=2) # Number of pixels to add to the radius of the saturated core of snowballs
         edge_size = integer(default=25) # Distance from detector edge where a saturated core is not required for snowball detection
         mask_snowball_core_next_int = boolean(default=True) # Flag saturated cores of snowballs in the next integration?
         snowball_time_masked_next_int = integer(default=4000) # Time in seconds over which saturated cores are flagged in next integration
@@ -150,7 +150,6 @@ class JumpStep(Step):
         log.info("Using GAIN reference file: %s", gain_filename)
         readnoise_filename = self.get_reference_file(result, "readnoise")
         log.info("Using READNOISE reference file: %s", readnoise_filename)
-
         with (
             datamodels.ReadnoiseModel(readnoise_filename) as rnoise_m,
             datamodels.GainModel(gain_filename) as gain_m,
@@ -169,11 +168,8 @@ class JumpStep(Step):
                 rnoise_2d = reffile_utils.get_subarray_model(result, rnoise_m).data
 
         # Instantiate a JumpData class and populate it based on the input RampModel.
+        fits_location = self.parent.output_dir
         jump_data = JumpData(result, gain_2d, rnoise_2d, dqflags.pixel)
-        if self.parent:
-            fits_location = self.parent.output_dir
-        else:
-            fits_location = self.output_dir
         jump_data.set_detection_settings(
             self.rejection_threshold,
             self.three_group_rejection_threshold,
@@ -196,7 +192,7 @@ class JumpStep(Step):
             after_jump_flag_n2,
         )
 
-        sat_expand = self.sat_expand * 2
+#        sat_expand = self.sat_expand * 2
         print("fits_location", fits_location)
         jump_data.set_snowball_info(
             self.expand_large_events,
@@ -205,7 +201,7 @@ class JumpStep(Step):
             self.expand_factor,
             self.sat_required_snowball,
             self.min_sat_radius_extend,
-            sat_expand,
+            self.sat_expand,
             self.edge_size,
             self.write_saturated_cores,
             self.mask_snowball_core_next_int,
