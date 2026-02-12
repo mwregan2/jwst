@@ -53,24 +53,26 @@ class ResampleSpecStep(Step):
         SlitModel or MultiSlitModel
             The resampled output, one slit per source.
         """
-        input_new = datamodels.open(input_data)
+        output_model = self.prepare_output(input_data)
 
-        # Check if input_new is a MultiSlitModel
-        model_is_msm = isinstance(input_new, MultiSlitModel)
+        # Check if input model is a MultiSlitModel
+        model_is_msm = isinstance(output_model, MultiSlitModel)
 
         #  If input is a 3D rateints MultiSlitModel (unsupported) skip the step
-        if model_is_msm and len((input_new[0]).shape) == 3:
+        if model_is_msm and len((output_model[0]).shape) == 3:
             log.warning("Resample spec step will be skipped")
-            input_new.meta.cal_step.resample = "SKIPPED"
+            output_model.meta.cal_step.resample = "SKIPPED"
+            return output_model
 
-            return input_new
+        # Convert ImageModel to SlitModel (may be needed for older MIRI LRS data)
+        if isinstance(output_model, ImageModel):
+            slit_model = datamodels.SlitModel(output_model)
+            if output_model is not input_data:
+                output_model.close()
+            output_model = slit_model
 
-        # Convert ImageModel to SlitModel (needed for MIRI LRS)
-        if isinstance(input_new, ImageModel):
-            input_new = datamodels.SlitModel(input_new)
-
-        if isinstance(input_new, ModelContainer):
-            input_models = input_new
+        if isinstance(output_model, ModelContainer):
+            input_models = output_model
 
             try:
                 output = input_models.meta.asn_table.products[0].name
@@ -82,8 +84,8 @@ class ResampleSpecStep(Step):
                 # TODO: the container-like object should retain asn_table
                 output = None
         else:
-            input_models = ModelContainer([input_new])
-            output = input_new.meta.filename
+            input_models = ModelContainer([output_model])
+            output = output_model.meta.filename
             self.blendheaders = False
 
         # Setup drizzle-related parameters
@@ -117,6 +119,13 @@ class ResampleSpecStep(Step):
             # populate the result wavelength attribute for SlitModel
             wl_array = get_wavelengths(result)
             result.wavelength = wl_array
+
+        # Output is a new datamodel.
+        # Clean up the input model(s) if they were opened here.
+        if output_model is not input_data:
+            del output_model
+        if input_models is not input_data:
+            del input_models
 
         return result
 
@@ -268,8 +277,14 @@ class ResampleSpecStep(Step):
             s_region = find_miri_lrs_sregion(s_region_model1, result.meta.wcs)
             result.meta.wcsinfo.s_region = s_region
             log.info(f"Updating S_REGION: {s_region}.")
+
+            # Transform source_xpos and source_ypos to resampled image frame, since they
+            # are defined in full-frame coordinates for MIRI LRS Fixed Slit
+            input_wcs = input_models[0].meta.wcs
+            self._transform_sourcepos(input_wcs, result)
         else:
             update_s_region_spectral(result)
+
         return result
 
     def update_slit_metadata(self, model):
@@ -304,3 +319,26 @@ class ResampleSpecStep(Step):
             else:
                 if val is not None:
                     setattr(model, attr, val)
+
+    def _transform_sourcepos(self, input_wcs, model):
+        """
+        Transform source_xpos and source_ypos to the resampled image frame.
+
+        Updates are made in-place.
+
+        Parameters
+        ----------
+        model : `~jwst.datamodels.SlitModel`
+            The resampled slit model to update.
+        """
+        if not (model.hasattr("source_xpos") and model.hasattr("source_ypos")):
+            return
+        x_in, y_in = model.source_xpos, model.source_ypos
+        ra_in, dec_in = input_wcs.pixel_to_world(x_in, y_in)
+        x_out, y_out = model.meta.wcs.world_to_pixel(ra_in, dec_in)
+        log.info(
+            "Transforming source_xpos and source_ypos to resampled image frame. "
+            f"New values: ({x_out}, {y_out})"
+        )
+        model.source_xpos = x_out
+        model.source_ypos = y_out

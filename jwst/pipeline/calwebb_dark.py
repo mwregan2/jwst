@@ -58,7 +58,7 @@ class DarkPipeline(Pipeline):
 
         Parameters
         ----------
-        input_data : str or `~jwst.datamodels.RampModel`
+        input_data : str or `~stdatamodels.jwst.datamodels.RampModel`
             The input data to process. If a string, it is assumed
             to be a filename pointing to a RampModel.
 
@@ -70,7 +70,7 @@ class DarkPipeline(Pipeline):
         log.info("Starting calwebb_dark ...")
 
         # open the input
-        input_data = datamodels.RampModel(input_data)
+        input_data = self.prepare_output(input_data, open_as_type=datamodels.RampModel)
 
         if input_data.meta.instrument.name == "MIRI":
             # process MIRI exposures;

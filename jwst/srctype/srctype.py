@@ -63,14 +63,9 @@ def set_source_type(input_model, source_type=None):
         # backwards compatibility with old datasets by first looking for the
         # SRCTYAPT keyword and using it if available, and if not, then use
         # SRCTYPE as both input and output (as before).
-        try:
-            user_type = input_model.meta.target.source_type_apt
-            log.info(f"Input SRCTYAPT = {user_type}")
-            if user_type is None:
-                log.warning("SRCTYAPT keyword not found in input; using SRCTYPE instead")
-                user_type = input_model.meta.target.source_type
-                input_model.meta.target.source_type_apt = user_type
-        except AttributeError:
+        user_type = input_model.meta.target.source_type_apt
+        log.info(f"Input SRCTYAPT = {user_type}")
+        if user_type is None:
             log.warning("SRCTYAPT keyword not found in input; using SRCTYPE instead")
             user_type = input_model.meta.target.source_type
             input_model.meta.target.source_type_apt = user_type
@@ -184,7 +179,7 @@ def set_source_type(input_model, source_type=None):
         input_model.meta.target.source_type = src_type
 
     # For WFSS modes check slit values of is_extended to set SRCTYPE
-    elif exptype in ["NIS_WFSS", "NRC_WFSS"]:
+    elif exptype in ["NIS_WFSS", "NRC_WFSS", "MIR_WFSS"]:
         for slit in input_model.slits:
             if slit.is_extended:
                 slit.source_type = "EXTENDED"

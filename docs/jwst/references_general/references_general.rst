@@ -144,6 +144,8 @@ documentation on each reference file.
 +                                                       +--------------------------------------------------+
 |                                                       | :ref:`AREA <area_reffile>`                       |
 +-------------------------------------------------------+--------------------------------------------------+
+| :ref:`picture_frame <picture_frame_step>`             | :ref:`PICTUREFRAME <pictureframe_reffile>`       |
++-------------------------------------------------------+--------------------------------------------------+
 | :ref:`ramp_fitting <ramp_fitting_step>`               | :ref:`GAIN <gain_reffile>`                       |
 +                                                       +--------------------------------------------------+
 |                                                       | :ref:`READNOISE <readnoise_reffile>`             |
@@ -176,11 +178,15 @@ documentation on each reference file.
 +-------------------------------------------------------+--------------------------------------------------+
 | :ref:`superbias <superbias_step>`                     | :ref:`SUPERBIAS <superbias_reffile>`             |
 +-------------------------------------------------------+--------------------------------------------------+
-| :ref:`tso_photometry <tso_photometry_step>`           | :ref:`TSOPHOT <tsophot_reffile>`                 |
-+                                                       +--------------------------------------------------+
-|                                                       | :ref:`GAIN <gain_reffile>`                       |
+| :ref:`targ_centroid <targ_centroid_step>`             | :ref:`FILTEROFFSET <filteroffset_reffile>`       |
++-------------------------------------------------------+--------------------------------------------------+
+| :ref:`tso_photometry <tso_photometry_step>`           | :ref:`GAIN <gain_reffile>`                       |
 +-------------------------------------------------------+--------------------------------------------------+
 | :ref:`wavecorr <wavecorr_step>`                       | :ref:`WAVECORR <wavecorr_reffile>`               |
++-------------------------------------------------------+--------------------------------------------------+
+| :ref:`wfss_contam <wfss_contam_step>`                 | :ref:`PHOTOM <photom_reffile>`                   |
++                                                       +--------------------------------------------------+
+|                                                       | :ref:`WAVELENGTHRANGE <wavelengthrange_reffile>` |
 +-------------------------------------------------------+--------------------------------------------------+
 
 +--------------------------------------------------+-------------------------------------------------------+
@@ -217,6 +223,8 @@ documentation on each reference file.
 | :ref:`FFLAT <fflat_reffile>`                     | :ref:`flatfield <flatfield_step>`                     |
 +--------------------------------------------------+-------------------------------------------------------+
 | :ref:`FILTEROFFSET <filteroffset_reffile>`       | :ref:`assign_wcs <assign_wcs_step>`                   |
++                                                  +-------------------------------------------------------+
+|                                                  | :ref:`targ_centroid <targ_centroid_step>`             |
 +--------------------------------------------------+-------------------------------------------------------+
 | :ref:`FLAT <flat_reffile>`                       | :ref:`clean_flicker_noise <clean_flicker_noise_step>` |
 |                                                  +-------------------------------------------------------+
@@ -265,6 +273,10 @@ documentation on each reference file.
 | :ref:`PERSAT <persat_reffile>`                   | :ref:`persistence <persistence_step>`                 |
 +--------------------------------------------------+-------------------------------------------------------+
 | :ref:`PHOTOM <photom_reffile>`                   | :ref:`photom <photom_step>`                           |
++                                                  +-------------------------------------------------------+
+|                                                  | :ref:`wfss_contam <wfss_contam_step>`                 |
++--------------------------------------------------+-------------------------------------------------------+
+| :ref:`PICTUREFRAME <pictureframe_reffile>`       | :ref:`picture_frame <picture_frame_step>`             |
 +--------------------------------------------------+-------------------------------------------------------+
 | :ref:`PSF <psf_reffile>`                         | :ref:`extract_1d <extract_1d_step>`                   |
 +--------------------------------------------------+-------------------------------------------------------+
@@ -302,13 +314,13 @@ documentation on each reference file.
 +--------------------------------------------------+-------------------------------------------------------+
 | :ref:`TRAPPARS <trappars_reffile>`               | :ref:`persistence <persistence_step>`                 |
 +--------------------------------------------------+-------------------------------------------------------+
-| :ref:`TSOPHOT <tsophot_reffile>`                 | :ref:`tso_photometry <tso_photometry_step>`           |
-+--------------------------------------------------+-------------------------------------------------------+
 | :ref:`WAVELENGTHRANGE <wavelengthrange_reffile>` | :ref:`assign_wcs <assign_wcs_step>`                   |
 +                                                  +-------------------------------------------------------+
 |                                                  | :ref:`background <background_subtraction>`            |
 +                                                  +-------------------------------------------------------+
 |                                                  | :ref:`extract_2d <extract_2d_step>`                   |
++                                                  +-------------------------------------------------------+
+|                                                  | :ref:`wfss_contam <wfss_contam_step>`                 |
 +--------------------------------------------------+-------------------------------------------------------+
 | :ref:`WAVECORR <wavecorr_reffile>`               | :ref:`wavecorr <wavecorr_step>`                       |
 +--------------------------------------------------+-------------------------------------------------------+
@@ -339,41 +351,41 @@ The required Keywords Documenting Contents of Reference Files are:
 ========  ==================================================================================
 Keyword   Comment
 ========  ==================================================================================
-REFTYPE   `BKG        Required values are listed in the discussion of each pipeline step.`
-DESCRIP   `Summary of file content and/or reason for delivery`
-AUTHOR    `Fred Jones     Person(s) who created the file`
-USEAFTER  `YYYY-MM-DDThh:mm:ss Date and time after the reference files will
+REFTYPE   ``BKG        Required values are listed in the discussion of each pipeline step.``
+DESCRIP   ``Summary of file content and/or reason for delivery``
+AUTHOR    ``Fred Jones     Person(s) who created the file``
+USEAFTER  ``YYYY-MM-DDThh:mm:ss Date and time after the reference files will
           be used. The T is required. Time string may NOT be omitted;
-          use T00:00:00 if no meaningful value is available.`
-PEDIGREE  `Options are
+          use T00:00:00 if no meaningful value is available.``
+PEDIGREE  ``Options are
           'SIMULATION'
           'GROUND'
           'DUMMY'
-          'INFLIGHT YYYY-MM-DD YYYY-MM-DD'`
-HISTORY   `Description of Reference File Creation`
-HISTORY   `DOCUMENT: Name of document describing the strategy and algorithms
-          used to create file.`
-HISTORY   `SOFTWARE: Description, version number, location of software used
-          to create file.`
-HISTORY   `DATA USED: Data used to create file`
-HISTORY   `DIFFERENCES: How is this version different from the one that
-          it replaces?`
-HISTORY   `If your text spills over to the next line,
-          begin it with another HISTORY keyword, as in this example.`
-TELESCOP  `JWST   Name of the telescope/project.`
-INSTRUME  `FGS   Instrument name. Allowed values: FGS, NIRCAM, NIRISS,
-          NIRSPEC, MIRI`
-SUBARRAY  `FULL, GENERIC, SUBS200A1, ...   (XXX abstract technical description
-          of SUBARRAY)`
-SUBSTRT1  `1        Starting pixel index along axis 1 (1-indexed)`
-SUBSIZE1  `2048     Size of subarray along axis 1`
-SUBSTRT2  `1        Starting pixel index along axis 2 (1-indexed)`
-SUBSIZE2  `2048     Size of subarray along axis 2`
-FASTAXIS  `1        Fast readout direction relative to image axes for
+          'INFLIGHT YYYY-MM-DD YYYY-MM-DD'``
+HISTORY   ``Description of Reference File Creation``
+HISTORY   ``DOCUMENT: Name of document describing the strategy and algorithms
+          used to create file.``
+HISTORY   ``SOFTWARE: Description, version number, location of software used
+          to create file.``
+HISTORY   ``DATA USED: Data used to create file``
+HISTORY   ``DIFFERENCES: How is this version different from the one that
+          it replaces?``
+HISTORY   ``If your text spills over to the next line,
+          begin it with another HISTORY keyword, as in this example.``
+TELESCOP  ``JWST   Name of the telescope/project.``
+INSTRUME  ``FGS   Instrument name. Allowed values: FGS, NIRCAM, NIRISS,
+          NIRSPEC, MIRI``
+SUBARRAY  ``FULL, GENERIC, SUBS200A1, ...   (XXX abstract technical description
+          of SUBARRAY)``
+SUBSTRT1  ``1        Starting pixel index along axis 1 (1-indexed)``
+SUBSIZE1  ``2048     Size of subarray along axis 1``
+SUBSTRT2  ``1        Starting pixel index along axis 2 (1-indexed)``
+SUBSIZE2  ``2048     Size of subarray along axis 2``
+FASTAXIS  ``1        Fast readout direction relative to image axes for
           Amplifier #1 (1 = +x axis, 2 = +y axis, -1 = -x axis, -2 = -y axis)
-          SEE NOTE BELOW.`
-SLOWAXIS  `2        Slow readout direction relative to image axes for
-          all amplifiers (1 = +x axis, 2 = +y axis, -1 = -x axis, -2 = -y axis)`
+          SEE NOTE BELOW.``
+SLOWAXIS  ``2        Slow readout direction relative to image axes for
+          all amplifiers (1 = +x axis, 2 = +y axis, -1 = -x axis, -2 = -y axis)``
 ========  ==================================================================================
 
 
@@ -472,11 +484,14 @@ Table 1.  Keywords Documenting Which Pipeline Steps Have Been Performed.
 
 =========   ========================================
 S_AMIANA    AMI fringe analysis
-S_AMIAVG    AMI fringe averaging
 S_AMINOR    AMI fringe normalization
 S_BARSHA    Bar shadow correction
 S_BKDSUB    Background subtraction
+S_BPXSLF    Bad pixel self-correction
+S_CHGMIG    Charge migration
+S_CLNFNS    Clean flicker noise
 S_COMB1D    1-D spectral combination
+S_CONTAM    WFSS contamination correction
 S_DARK      Dark subtraction
 S_DQINIT    DQ initialization
 S_EXTR1D    1-D spectral extraction
@@ -495,28 +510,35 @@ S_KLIP      Coronagraphic PSF subtraction
 S_LASTFR    MIRI last frame correction
 S_LINEAR    Linearity correction
 S_MIREMI    MIRI EMI correction
-S_MRSMAT    MIRI MRS background matching
 S_MSAFLG    NIRSpec MSA failed shutter flagging
+S_MSBSUB    Master background subtraction
+S_MTWCS     Assign moving target WCS
 S_OUTLIR    Outlier detection
+S_PCTFRM    Picture frame correction
 S_PERSIS    Persistence correction
 S_PHOTOM    Photometric (absolute flux) calibration
 S_PSFALI    Coronagraphic PSF alignment
 S_PSFSTK    Coronagraphic PSF stacking
 S_PTHLOS    Pathloss correction
+S_PXREPL    Pixel replacement
 S_RAMP      Ramp fitting
 S_REFPIX    Reference pixel correction
 S_RESAMP    Resampling (drizzling)
+S_RESFRI    Residual fringe correction
 S_RESET     MIRI reset correction
 S_RSCD      MIRI RSCD correction
 S_SATURA    Saturation check
 S_SKYMAT    Sky matching
+S_SPLEAK    Spectral leak
 S_SRCCAT    Source catalog creation
 S_SRCTYP    Source type determination
 S_STRAY     Straylight correction
 S_SUPERB    Superbias subtraction
+S_TACNTR    Source position from TA verification image
 S_TELEMI    Telescope emission correction
 S_TSPHOT    TSO imaging photometry
 S_TWKREG    Tweakreg image alignment
+S_WAVCOR    Wavelength correction
 S_WCS       WCS assignment
 S_WFSCOM    Wavefront sensing image combination
 S_WHTLIT    TSO white-light curve generation
@@ -632,7 +654,7 @@ Bit  Value         Name              Description
 5    32            PERSISTENCE       High persistence
 6    64            AD_FLOOR          Below A/D floor
 7    128           CHARGELOSS        Charge Migration
-8    256           UNRELIABLE_ERROR  Uncertainty exceeds quoted error
+8    256           RESERVED          Reserved for future need; unused
 9    512           NON_SCIENCE       Pixel not on science portion of detector
 10   1024          DEAD              Dead pixel
 11   2048          HOT               Hot pixel
@@ -683,9 +705,9 @@ bit flags that should be summed to obtain the final "good" bits. For example,
 both "4,8" and "4+8" are equivalent to a setting of "12".
 
 Finally, instead of integers, the JWST mnemonics, as defined above, may be used.
-For example, all the following specifications are equivalent:
+For example, all the following specifications are equivalent::
 
-`"12" == "4+8" == "4, 8" == "JUMP_DET, DROPOUT"`
+    "12" == "4+8" == "4, 8" == "JUMP_DET, DROPOUT"
 
 .. note::
  The default value (0) will make *all* non-zero

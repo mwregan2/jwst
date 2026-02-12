@@ -1,8 +1,10 @@
 import os
 from glob import glob
 
+import gwcs
 import numpy as np
 import pytest
+from astropy.modeling.models import Const1D, Mapping
 from stdatamodels.jwst import datamodels
 from stdatamodels.jwst.datamodels.dqflags import pixel as flags
 
@@ -23,11 +25,12 @@ def cal_data(shape, bad_idx, dispaxis=1, model="slit"):
 
     # Set the data and error arrays to all 1s except one bad pixel
     # to correct at the middle of the array
-    model.data[:] = 1.0
-    model.err[:] = 1.0
-    model.var_poisson[:] = 1.0
-    model.var_rnoise[:] = 1.0
-    model.var_flat[:] = 1.0
+    ones = np.ones(shape, dtype=float)
+    model.data = ones.copy()
+    model.err = ones.copy()
+    model.var_poisson = ones.copy()
+    model.var_rnoise = ones.copy()
+    model.var_flat = ones.copy()
 
     bad_flag = flags["DO_NOT_USE"] + flags["OTHER_BAD_PIXEL"]
     model.data[bad_idx] = np.nan
@@ -118,15 +121,14 @@ def miri_lrs():
 
 def miri_mrs():
     shape = (20, 20)
-
-    def mock_transform(*args):
-        return None, np.full(shape, 1), None
-
     bad_idx = (10, 10)
     model = cal_data(shape=shape, bad_idx=bad_idx, dispaxis=2, model="ifu")
     model.meta.instrument.name = "MIRI"
     model.meta.exposure.type = "MIR_MRS"
-    model.meta.wcs = {"transform": mock_transform}
+
+    # Mock a wcs that just returns 1 for alpha, beta, lam
+    transform = Mapping((0, 1, 1), n_inputs=2) | Const1D(1) & Const1D(1) & Const1D(1)
+    model.meta.wcs = gwcs.WCS([("detector", transform), ("alpha_beta", None)])
     return model, bad_idx
 
 
@@ -163,6 +165,13 @@ def test_pixel_replace_no_container(input_model_function, algorithm):
     assert np.all(result.dq[..., :, 1] == flags["DO_NOT_USE"] + flags["NON_SCIENCE"])
     assert np.all(result.dq[..., 1, :] == flags["DO_NOT_USE"] + flags["NON_SCIENCE"])
 
+    # Step is recorded as complete
+    assert result.meta.cal_step.pixel_replace == "COMPLETE"
+
+    # Input is not modified
+    assert result is not input_model
+    assert input_model.meta.cal_step.pixel_replace is None
+
     result.close()
     input_model.close()
 
@@ -193,6 +202,13 @@ def test_pixel_replace_multislit(input_model_function, algorithm):
     )
     assert np.all(result.slits[0].dq[..., :, 1] == flags["DO_NOT_USE"] + flags["NON_SCIENCE"])
     assert np.all(result.slits[0].dq[..., 1, :] == flags["DO_NOT_USE"] + flags["NON_SCIENCE"])
+
+    # Step is recorded as complete
+    assert result.meta.cal_step.pixel_replace == "COMPLETE"
+
+    # Input is not modified
+    assert result is not input_model
+    assert input_model.meta.cal_step.pixel_replace is None
 
     result.close()
     input_model.close()
@@ -238,6 +254,10 @@ def test_pixel_replace_nirspec_ifu(tmp_cwd, input_model_function, algorithm):
     assert np.all(result.dq[..., :, 1] == flags["DO_NOT_USE"] + flags["NON_SCIENCE"])
     assert np.all(result.dq[..., 1, :] == flags["DO_NOT_USE"] + flags["NON_SCIENCE"])
 
+    # Input is not modified
+    assert result is not input_model
+    assert input_model.meta.cal_step.pixel_replace is None
+
     result.close()
     input_model.close()
 
@@ -266,6 +286,10 @@ def test_pixel_replace_container_names(tmp_cwd, input_model_function):
         with datamodels.open(file) as model:
             assert model.meta.cal_step.pixel_replace == "COMPLETE"
             assert model.meta.filename == expected_name[i]
+
+    # Input is not modified
+    for model in container:
+        assert model.meta.cal_step.pixel_replace is None
 
     result.close()
     input_model.close()
@@ -321,3 +345,28 @@ def test_pixel_replace_no_valid_data(caplog):
 
     result.close()
     input_model.close()
+
+
+def test_skip_unexpected_type():
+    bad_model = datamodels.RampModel()
+    result = PixelReplaceStep.call(bad_model)
+
+    # Step is skipped
+    assert result.meta.cal_step.pixel_replace == "SKIPPED"
+
+    # Input is not modified
+    assert result is not bad_model
+    assert bad_model.meta.cal_step.pixel_replace is None
+
+
+def test_skip_unexpected_type_in_container():
+    bad_model = datamodels.RampModel()
+    container = ModelContainer([bad_model])
+    result = PixelReplaceStep.call(container)
+
+    # Step is skipped
+    assert result[0].meta.cal_step.pixel_replace == "SKIPPED"
+
+    # Input is not modified
+    assert result[0] is not bad_model
+    assert bad_model.meta.cal_step.pixel_replace is None

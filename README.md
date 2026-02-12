@@ -8,20 +8,22 @@
 [![Powered by STScI Badge](https://img.shields.io/badge/powered%20by-STScI-blue.svg?colorA=707170&colorB=3e8ddd&style=flat)](https://www.stsci.edu)
 [![Powered by Astropy Badge](https://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](https://www.astropy.org/)
 [![DOI](https://zenodo.org/badge/60551519.svg)](https://zenodo.org/badge/latestdoi/60551519)
+[![Python Versions](https://img.shields.io/pypi/pyversions/jwst)](https://pypi.org/project/jwst/)
 
 ![STScI Logo](docs/_static/stsci_logo.png)
 
-> [!IMPORTANT]
-> JWST requires a C compiler for dependencies.
-
-> [!NOTE]
-> Linux and MacOS platforms are tested and supported.  Windows is not currently supported.
+This package processes uncalibrated data for both imagers and spectrographs onboard the James Webb Space Telescope (JWST), an orbiting infrared observatory stationed at Earth-Sun L<sub>2</sub>. It performs a series of calibration steps that result in standard data products usable for science.
+More information on running this pipeline, including explanations of specific stages and how to obtain reference files,
+can be found [here](https://jwst-docs.stsci.edu/jwst-science-calibration-pipeline).
 
 > [!WARNING]
 > Installation of `jwst` versions `1.15.1` through `1.16.1` will pull an incompatible version of the `gwcs` dependency -
 > this can be remedied by downgrading the gwcs version through e.g. `pip install 'gwcs<0.22'`
+
+> [!IMPORTANT]
+> JWST requires a C compiler for dependencies.
 >
-> Installation on MacOS Mojave 10.14 will fail due to lack of a stable build for dependency ``opencv-python``.
+> Linux and MacOS platforms are tested and supported.  Windows is not currently supported.
 
 ## Installation
 
@@ -29,7 +31,7 @@ Please contact the [JWST Help Desk](https://jwsthelp.stsci.edu) for installation
 
 The easiest way to install the latest `jwst` release into a fresh virtualenv or conda environment is
 
-    pip install jwst
+    pip install jwst==1.20.1
 
 ### Detailed Installation
 
@@ -56,22 +58,22 @@ Remember that all conda operations must be done from within a bash/zsh shell.
 
 You can install the latest released version via `pip`.  From a bash/zsh shell:
 
-    conda create -n <env_name> python=3.12
+    conda create -n <env_name> python=3.13
     conda activate <env_name>
-    pip install jwst
+    pip install jwst==1.19.1
 
-You can also install a specific version:
-
-    conda create -n <env_name> python=3.12
-    conda activate <env_name>
-    pip install jwst==1.18.1
+If no version tag is specified in the install command, `pip` will find the latest release compatible
+with the current environment. This can lead to an unintended `jwst` version, if the latest release
+of `jwst` is not compatible with your environment's python version. Explicitly setting the version
+in the install command will return an informative error if the latest release is not compatible
+with your environment.
 
 ### Installing the development version from Github
 
 You can install the latest development version (not as well tested) from the
 Github main branch:
 
-    conda create -n <env_name> python=3.12
+    conda create -n <env_name> python=3.13
     conda activate <env_name>
     pip install git+https://github.com/spacetelescope/jwst
 
@@ -235,6 +237,10 @@ The latest build information is also available on JDox at:
 
 https://jwst-docs.stsci.edu/jwst-science-calibration-pipeline/jwst-operations-pipeline-build-information
 
+For more info on public API and its deprecation policy:
+
+https://jwst-pipeline.readthedocs.io/en/latest/jwst/user_documentation/more_information.html
+
 ## Contributions and Feedback
 
 We welcome contributions and feedback on the project. Please follow the
@@ -261,11 +267,16 @@ the specified context and less than the context for the next release.
 
 | jwst tag            | DMS build | SDP_VER  | CRDS_CONTEXT | Released   | Ops Install | Notes                                         |
 |---------------------|-----------|----------|--------------|------------|-------------|-----------------------------------------------|
+| 1.20.2              | B12.1.1   | 2025.4.1 | 1464         | 2025-10-31 |             | Patch release for B12.1.1                     |
+| 1.20.1              | B12.1     | 2025.4.0 | 1464         | 2025-10-20 |             | Patch release for B12.1                       |
+| 1.20.0              | B12.1     | 2025.4.0 | 1462         | 2025-10-15 |             | First release candidate for B12.1             |
+| 1.19.2              | B12.0.2   | 2025.3.0 | 1408         | 2025-09-11 | 2025-10-06  | Patch release for B12.0.2                     |
+| 1.19.1              | B12.0.1   | 2025.3.0 | 1408         | 2025-07-21 | 2025-08-26  | Patch release for B12.0.1                     |
 | 1.19.0              | B12.0     | 2025.3.0 | 1408         | 2025-06-26 |             | First release candidate for B12.0             |
 | 1.18.1              | B11.3.1   | 2025.2.1 | 1364         | 2025-06-10 |             | Patch release for B11.3.1                     |
 | 1.18.0              | B11.3     | 2025.2.0 | 1364         | 2025-04-01 | 2025-05-20  | First release for B11.3                       |
 | 1.17.1              | B11.2     | 2025.1.0 | 1321         | 2025-01-02 | 2025-03-05  | Final release candidate for B11.2             |
-| 1.17.0              | B11.2     | 2025.1.0 | 1321         | 2024-12-20 | TBD         | First release candidate for B11.2             |
+| 1.17.0              | B11.2     | 2025.1.0 | 1321         | 2024-12-20 |             | First release candidate for B11.2             |
 | 1.16.1              | B11.1.1   | 2024.3.1 | 1303         | 2024-11-13 | 2024-12-06  | Final release candidate for B11.1             |
 | 1.16.0              | B11.1     | 2024.3.0 | 1298         | 2024-09-20 |             | First release candidate for B11.1             |
 | 1.15.1              | B11.0     | 2024.2.2 | 1293         | 2024-07-08 | 2024-09-12  | Final release candidate for B11.0             |
