@@ -3,112 +3,22 @@ from pathlib import Path
 import numpy as np
 import pytest
 import stdatamodels.jwst.datamodels as dm
+from astropy.modeling import models
+from astropy.table import QTable
 from numpy.testing import assert_allclose
-from photutils.datasets import make_gwcs
 
 from jwst.source_catalog import SourceCatalogStep
+from jwst.source_catalog.tests.helpers import make_nircam_model, make_nircam_model_without_apcorr
 
 
 @pytest.fixture
 def nircam_model():
-    rng = np.random.default_rng(seed=123)
-    data = rng.normal(0, 0.5, size=(101, 101))
-    data[20:80, 10:20] = 1.4
-    data[20:30, 20:45] = 1.4
-    data[20:80, 55:65] = 7.2
-    data[70:80, 65:87] = 7.2
-    data[45:55, 65:87] = 7.2
-    data[20:30, 65:87] = 7.2
-    data[55:75, 82:92] = 7.2
-    data[25:45, 82:92] = 7.2
-
-    wht = np.ones(data.shape)
-    wht[0:10, :] = 0.0
-    err = np.abs(data) / 10.0
-    model = dm.ImageModel(data, wht=wht, err=err)
-    model.meta.bunit_data = "MJy/sr"
-    model.meta.bunit_err = "MJy/sr"
-    model.meta.photometry.pixelarea_steradians = 1.0
-    model.meta.wcs = make_gwcs(data.shape)
-    model.meta.wcsinfo = {
-        "ctype1": "RA---TAN",
-        "ctype2": "DEC--TAN",
-        "dec_ref": 11.99875540218638,
-        "ra_ref": 22.02351763251896,
-        "roll_ref": 0.005076934167039675,
-        "v2_ref": 86.039011,
-        "v3_ref": -493.385704,
-        "v3yangle": -0.07385127,
-        "vparity": -1,
-        "wcsaxes": 2,
-        "crpix1": 50,
-        "crpix2": 50,
-    }
-    model.meta.instrument = {
-        "channel": "LONG",
-        "detector": "NRCALONG",
-        "filter": "F444W",
-        "lamp_mode": "NONE",
-        "module": "A",
-        "name": "NIRCAM",
-        "pupil": "CLEAR",
-    }
-    model.meta.exposure.type = "NRC_IMAGE"
-    model.meta.observation.date = "2021-01-01"
-    model.meta.observation.time = "00:00:00"
-
-    return model
+    return make_nircam_model()
 
 
 @pytest.fixture
 def nircam_model_without_apcorr():
-    rng = np.random.default_rng(seed=123)
-    data = rng.normal(0, 0.5, size=(101, 101))
-    data[20:80, 10:20] = 1.4
-    data[20:30, 20:45] = 1.4
-    data[20:80, 55:65] = 7.2
-    data[70:80, 65:87] = 7.2
-    data[45:55, 65:87] = 7.2
-    data[20:30, 65:87] = 7.2
-    data[55:75, 82:92] = 7.2
-    data[25:45, 82:92] = 7.2
-
-    wht = np.ones(data.shape)
-    wht[0:10, :] = 0.0
-    err = np.abs(data) / 10.0
-    model = dm.ImageModel(data, wht=wht, err=err)
-    model.meta.bunit_data = "MJy/sr"
-    model.meta.bunit_err = "MJy/sr"
-    model.meta.photometry.pixelarea_steradians = 1.0
-    model.meta.wcs = make_gwcs(data.shape)
-    model.meta.wcsinfo = {
-        "ctype1": "RA---TAN",
-        "ctype2": "DEC--TAN",
-        "dec_ref": 11.99875540218638,
-        "ra_ref": 22.02351763251896,
-        "roll_ref": 0.005076934167039675,
-        "v2_ref": 86.039011,
-        "v3_ref": -493.385704,
-        "v3yangle": -0.07385127,
-        "vparity": -1,
-        "wcsaxes": 2,
-        "crpix1": 50,
-        "crpix2": 50,
-    }
-    model.meta.instrument = {
-        "channel": "LONG",
-        "detector": "NRCALONG",
-        "filter": "F2550WR",
-        "lamp_mode": "NONE",
-        "module": "A",
-        "name": "NIRCAM",
-        "pupil": "CLEAR",
-    }
-    model.meta.exposure.type = "NRC_IMAGE"
-    model.meta.observation.date = "2021-01-01"
-    model.meta.observation.time = "00:00:00"
-
-    return model
+    return make_nircam_model_without_apcorr()
 
 
 @pytest.mark.parametrize(
@@ -129,20 +39,22 @@ def test_source_catalog(nircam_model, npixels, nsources):
 
     if npixels == 5 and nsources == 2:
         # test values of some specific computed quantities
-        assert np.isclose(cat["xcentroid"][1], 19.46399720865899)
-        assert np.isclose(cat["ycentroid"][1], 41.95288393407728)
-        assert np.isclose(cat["aper_bkg_flux"][1].value, 1400000.0)
-        assert np.isclose(cat["aper_bkg_flux_err"][1].value, 85223.70700074881)
-        assert np.isclose(cat["CI_50_30"][1], 2.3342599432074653)
+        assert np.isclose(cat["xcentroid"][1], 19.453064764431833)
+        assert np.isclose(cat["ycentroid"][1], 41.963065678485115)
+        assert np.isclose(cat["aper_bkg_flux"][1].value, 1.40e-7)
+        assert np.isclose(cat["aper_bkg_flux_err"][1].value, 8.52237054e-09)
+        assert np.isclose(cat["CI_50_30"][1], 2.352272196434725)
         assert np.isclose(cat["sharpness"][1], 0.9102634628764403)
         assert np.isclose(cat["roundness"][1], 1.5954264)
-        assert np.isclose(cat["nn_dist"][1].value, 53.0737632103816)
-        assert np.isclose(cat["isophotal_flux"][1], 930.9999841451645)
-        assert np.isclose(cat["isophotal_flux_err"][1], 3.6102633)
-        assert np.isclose(cat["semimajor_sigma"][1].value, 18.847635525516534)
-        assert np.isclose(cat["semiminor_sigma"][1].value, 7.031371175038476)
-        assert np.isclose(cat["ellipticity"][1], 0.626936165784871)
-        assert np.isclose(cat["orientation"][1].value, -72.75413766990114)
+        assert np.isclose(cat["nn_dist"][1].value, 53.07168773319497)
+        assert np.isclose(cat["isophotal_flux"][1].value, 7.940753383195442e-05)
+        assert cat["isophotal_flux_err"][1].unit == "Jy"
+        assert np.isclose(cat["isophotal_flux_err"][1].value, 3.6102634e-07)
+        assert np.isclose(cat["isophotal_abmag"][1], 19.150345729246215)
+        assert np.isclose(cat["semimajor_sigma"][1].value, 18.84372169911978)
+        assert np.isclose(cat["semiminor_sigma"][1].value, 7.024931388267103)
+        assert np.isclose(cat["ellipticity"][1].value, 0.62720043)
+        assert np.isclose(cat["orientation"][1].value, -72.78329207140818)
 
 
 def test_source_catalog_no_sources(nircam_model, monkeypatch):
@@ -190,14 +102,20 @@ def test_source_catalog_point_sources(finder, nircam_model, tmp_cwd):
     """Test the three source finding algorithms with point sources."""
     data = np.random.default_rng(seed=123).normal(0, 0.5, size=(101, 101))
 
-    # make a point source with some size that looks a bit like a psf, no need to be realistic
-    point_source = np.ones((7, 7))
-    point_source[1:6, 1:6] = 3.0
-    point_source[2:5, 2:5] = 5.0
-    point_source[3, 3] = 10.0
+    # Create coordinate grids for Airy disk models
+    y, x = np.mgrid[0:101, 0:101]
 
-    data[30:37, 30:37] = point_source
-    data[70:77, 70:77] = point_source
+    # Create two Airy disk point sources
+    # First source at position (33, 33)
+    airy1 = models.AiryDisk2D(amplitude=10.0, x_0=33, y_0=33, radius=5.0)
+    source1 = airy1(x, y)
+
+    # Second source at position (73, 73)
+    airy2 = models.AiryDisk2D(amplitude=10.0, x_0=73, y_0=73, radius=5.0)
+    source2 = airy2(x, y)
+
+    # Add the sources to the background
+    data += source1 + source2
 
     nircam_model.data = data
 
@@ -209,6 +127,8 @@ def test_source_catalog_point_sources(finder, nircam_model, tmp_cwd):
         npixels=5,
         bkg_boxsize=50,
         kernel_fwhm=2.0,
+        roundlo=-1.0,
+        sharplo=0.0,
         starfinder=finder,
         save_results=True,
     )
@@ -234,3 +154,20 @@ def test_source_catalog_point_sources(finder, nircam_model, tmp_cwd):
             assert segm.data.shape == (101, 101)
             assert segm.meta.hasattr("wcs")
             assert segm.meta.hasattr("wcsinfo")
+
+
+def test_output_is_not_input(nircam_model):
+    """Make sure input is not modified."""
+    step = SourceCatalogStep(
+        snr_threshold=0.5, npixels=5, bkg_boxsize=50, kernel_fwhm=2.0, save_results=False
+    )
+    result = step.run(nircam_model)
+
+    # Input is an image, output is a catalog
+    assert result is not nircam_model
+    assert isinstance(result, QTable)
+    assert isinstance(nircam_model, dm.ImageModel)
+
+    # Input is not modified when called standalone
+    assert nircam_model.meta.source_catalog is None
+    assert nircam_model.meta.cal_step.source_catalog is None

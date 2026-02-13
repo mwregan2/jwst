@@ -138,7 +138,7 @@ the addition of the association candidate ID and the "_ami-oi", "_amimulti-oi", 
 
 Interferometric observables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-:Data model: `~jwst.datamodels.AmiOIModel`
+:Data model: `~stdatamodels.jwst.datamodels.AmiOIModel`
 :File suffix: _ami-oi.fits, _amimulti-oi.fits
 
 The inteferometric observables are saved as OIFITS files, a registered FITS format
@@ -146,21 +146,22 @@ for optical interferometry, containing the following list of extensions:
 
 1. ``OI_ARRAY``: AMI subaperture information
 2. ``OI_TARGET``: target properties
-3. ``OI_T3``: extracted closure amplitudes, triple-product phases
+3. ``OI_T3``: extracted triple-product amplitudes, closure phases
 4. ``OI_VIS``: extracted visibility (fringe) amplitudes, phases
 5. ``OI_VIS2``: squared visibility (fringe) amplitudes
-6. ``OI_WAVELENGTH``: filter information
+6. ``OI_Q4``: closure amplitudes, four-hole phases
+7. ``OI_WAVELENGTH``: filter information
 
 For more information on the format and contents of OIFITS files, see the `OIFITS2 standard <https://doi.org/10.1051/0004-6361/201526405>`_.
 
-The _ami-oi.fits file contains tables of observables averaged over all integrations of the input file. The error is taken to be the standard error of the mean, where the variance is the covariance between amplitudes and phases (e.g. fringe amplitudes and fringe phases, closure phases and triple-product amplitudes).
+The _ami-oi.fits file contains tables of observables averaged over all integrations of the input file. The error is taken to be the standard error of the mean, where the variance is the covariance between amplitudes and phases (e.g. fringe amplitudes and fringe phases, closure phases and triple-product amplitudes, closure amplitudes and four-hole phases).
 The _amimulti-oi.fits file contains observables for each integration, and does not contain error estimates. The
 structure is the same as the _ami-oi.fits file, but the following data columns are 2D, with the second dimension being
-the number of integrations: "PISTONS", "PIST_ERR", "VISAMP", "VISAMPERR", "VISPHI", "VISPHIERR", "VIS2DATA", "VIS2ERR", "T3AMP", "T3AMPERR", "T3PHI", "T3PHIERR".
+the number of integrations: "PISTONS", "PIST_ERR", "VISAMP", "VISAMPERR", "VISPHI", "VISPHIERR", "VIS2DATA", "VIS2ERR", "T3AMP", "T3AMPERR", "T3PHI", "T3PHIERR", "Q4AMP","Q4AMPERR", "Q4PHI", "Q4PHI_ERR".
 
 LG model parameters
 ^^^^^^^^^^^^^^^^^^^
-:Data model: `~jwst.datamodels.AmiLgFitModel`
+:Data model: `~stdatamodels.jwst.datamodels.AmiLgFitModel`
 :File suffix: _amilg.fits
 
 The _amilg.fits output file contains the cropped and cleaned data, model, and residuals (data - model) as well as

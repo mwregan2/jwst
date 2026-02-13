@@ -1,5 +1,6 @@
 """JWST pipeline step for image alignment."""
 
+import gc
 import logging
 from pathlib import Path
 
@@ -29,7 +30,7 @@ def _oxford_or_str_join(str_list):
         return ", ".join(map(repr, str_list[:-1])) + ", or " + repr(str_list[-1])
 
 
-SINGLE_GROUP_REFCAT = ["GAIADR3", "GAIADR2", "GAIADR1"]
+SINGLE_GROUP_REFCAT = ["GAIAREFCAT", "GAIADR3", "GAIADR2", "GAIADR1"]
 """List of astrometric catalogs available to the tweakreg step."""
 
 _SINGLE_GROUP_REFCAT_STR = _oxford_or_str_join(SINGLE_GROUP_REFCAT)
@@ -138,10 +139,15 @@ class TweakRegStep(Step):
         output : `~jwst.datamodels.library.ModelLibrary`
             The aligned input data models.
         """
-        if isinstance(input_data, ModelLibrary):
-            images = input_data
+        # Check the input for open models and make a copy if necessary
+        # to avoid modifying input data.
+        # If there are no open models already, do not open them.  Leave
+        # that to the ModelLibrary call below.
+        output_models = self.prepare_output(input_data, open_models=False)
+        if isinstance(output_models, ModelLibrary):
+            images = output_models
         else:
-            images = ModelLibrary(input_data, on_disk=not self.in_memory)
+            images = ModelLibrary(output_models, on_disk=not self.in_memory)
 
         if len(images) == 0:
             raise ValueError("Input must contain at least one image model.")
@@ -327,6 +333,7 @@ class TweakRegStep(Step):
                     return images
                 finally:
                     del ref_image
+                    gc.collect()
 
         if local_align_failed and not align_to_abs_refcat:
             record_step_status(images, "tweakreg", success=False)

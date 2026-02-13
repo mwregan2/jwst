@@ -4,20 +4,15 @@
 SkyMatch
 ========
 
-.. moduleauthor:: Mihai Cara <help@stsci.edu>
-
 .. toctree::
    :maxdepth: 2
 
    description.rst
    arguments.rst
-   reference_files.rst
 
-**Also See:**
+* Reference File: The ``skymatch`` step does not use any reference files.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   skymatch_step
-
-.. automodapi:: jwst.skymatch
+   api_ref.rst

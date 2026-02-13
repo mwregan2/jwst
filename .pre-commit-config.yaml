@@ -1,4 +1,5 @@
 ci:
+  autofix_prs: false
   autoupdate_schedule: monthly
 
 exclude: ".*\\.asdf$"
@@ -30,16 +31,22 @@ repos:
       - id: text-unicode-replacement-char
   # lint and format
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.11
+    rev: v0.14.14
     hooks:
       - id: ruff-check
         args:
           - --fix
           - --show-fixes
       - id: ruff-format
+  # C style
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v21.1.8
+    hooks:
+      - id: clang-format
+        types_or: [c]
   # type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.17.1
+    rev: v1.19.1
     hooks:
       - id: mypy
   # spell-checking
@@ -72,7 +79,7 @@ repos:
   #     - id: taplo-format
   # validate numpy-style docstrings
   - repo: https://github.com/numpy/numpydoc
-    rev: v1.9.0
+    rev: v1.10.0
     hooks:
       - id: numpydoc-validation
         exclude: |

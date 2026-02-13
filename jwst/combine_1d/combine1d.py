@@ -95,13 +95,12 @@ class InputSpectrumModel:
             time, which is used as a weight; or "unit_weight", which means
             to use weight = 1.
         """
-        self.wavelength = spec.spec_table.field("wavelength").copy()
-
-        self.flux = spec.spec_table.field("flux").copy()
-        self.flux_error = spec.spec_table.field("flux_error").copy()
-        self.surf_bright = spec.spec_table.field("surf_bright").copy()
-        self.sb_error = spec.spec_table.field("sb_error").copy()
-        self.dq = spec.spec_table.field("dq").copy()
+        self.wavelength = spec.spec_table.field("wavelength")
+        self.flux = spec.spec_table.field("flux")
+        self.flux_error = spec.spec_table.field("flux_error")
+        self.surf_bright = spec.spec_table.field("surf_bright")
+        self.sb_error = spec.spec_table.field("sb_error")
+        self.dq = spec.spec_table.field("dq")
         self.nelem = self.wavelength.shape[0]
         self.unit_weight = False  # may be reset below
         self.right_ascension = np.zeros_like(self.wavelength)
@@ -735,10 +734,17 @@ def _read_input_spectra(input_model, exptime_key, input_spectra):
         spectra = input_model.spec
     for in_spec in spectra:
         if not np.any(np.isfinite(in_spec.spec_table.field("flux"))):
-            log.warning(
-                f"Input spectrum {in_spec.source_id} order {in_spec.spectral_order} "
-                f"from group_id {in_spec.meta.group_id} has no valid flux values; skipping."
-            )
+            if in_spec.meta.hasattr("group_id"):
+                msg = (
+                    f"Input spectrum {in_spec.source_id} order {in_spec.spectral_order} "
+                    f"from group_id {in_spec.meta.group_id} has no valid flux values; skipping."
+                )
+            else:
+                msg = (
+                    f"Input spectrum {in_spec.source_id} order {in_spec.spectral_order} "
+                    "has no valid flux values; skipping."
+                )
+            log.warning(msg)
             continue
         spectral_order = in_spec.spectral_order
         if spectral_order not in input_spectra:
@@ -758,6 +764,7 @@ def combine_1d_spectra(input_model, exptime_key, sigma_clip=None):
         but may also be a multi-spectrum model, such as MultiSpecModel or
         TSOMultiSpecModel.  Input spectra may have different spectral orders
         or wavelengths but should all share the same target.
+        May be updated in place if processing is skipped.
     exptime_key : str
         A string identifying which keyword to use to get the exposure time,
         which is used as a weight when combining spectra.  The value should
@@ -783,9 +790,8 @@ def combine_1d_spectra(input_model, exptime_key, sigma_clip=None):
 
     if len(input_spectra) == 0:
         log.error("No valid input spectra found for source. Skipping.")
-        result = input_model.copy()
-        result.meta.cal_step.combine_1d = "SKIPPED"
-        return result
+        input_model.meta.cal_step.combine_1d = "SKIPPED"
+        return input_model
 
     for order in input_spectra:
         output_spectra[order] = OutputSpectrumModel()

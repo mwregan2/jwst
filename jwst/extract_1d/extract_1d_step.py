@@ -57,6 +57,7 @@ class Extract1dStep(Step):
     soss_width = float(default=40.)  # aperture width used to extract the 1D spectrum from the de-contaminated trace.
     soss_bad_pix = option("model", "masking", default="masking")  # method used to handle bad pixels
     soss_modelname = output_file(default = None)  # Filename for optional model output of traces and pixel weights
+    soss_order_3 = boolean(default=True)  # Whether to include spectral order 3 in the extraction for SOSS
     """  # noqa: E501
 
     reference_file_types = ["extract1d", "apcorr", "pastasoss", "specprofile", "speckernel", "psf"]
@@ -163,6 +164,7 @@ class Extract1dStep(Step):
 
         # Build SOSS kwargs dictionary.
         soss_kwargs = {}
+        soss_kwargs["order_3"] = self.soss_order_3
         soss_kwargs["threshold"] = self.soss_threshold
         soss_kwargs["n_os"] = self.soss_n_os
         soss_kwargs["tikfac"] = self.soss_tikfac
@@ -195,8 +197,6 @@ class Extract1dStep(Step):
         else:
             result.meta.cal_step.extract_1d = "COMPLETE"
             result.meta.target.source_type = None
-
-            model.close()
 
             if self.soss_modelname:
                 soss_modelname = self.make_output_path(
@@ -338,23 +338,19 @@ class Extract1dStep(Step):
 
         Parameters
         ----------
-        input_data : DataModel
+        input_data : `~stdatamodels.DataModel`
             The input model.
 
         Returns
         -------
-        DataModel
-            This will be `input_model` if the step was skipped; otherwise,
+        `~stdatamodels.DataModel`
+            This will be input model if the step was skipped; otherwise,
             it will be a model containing 1-D extracted spectra.
         """
         # Open the input and figure out what type of model it is
-        if isinstance(input_data, ModelContainer):
-            input_model = input_data
-        else:
-            input_model = datamodels.open(input_data)
-
+        output_model = self.prepare_output(input_data)
         if isinstance(
-            input_model,
+            output_model,
             (
                 datamodels.CubeModel,
                 datamodels.ImageModel,
@@ -365,36 +361,35 @@ class Extract1dStep(Step):
             ),
         ):
             # Acceptable input type, just log it
-            log.debug(f"Input is a {str(input_model)}.")
-        elif isinstance(input_model, datamodels.MultiSlitModel):
+            log.debug(f"Input is a {str(output_model)}.")
+        elif isinstance(output_model, datamodels.MultiSlitModel):
             # If input is multislit, with 3D calints, skip the step
             log.debug("Input is a MultiSlitModel")
-            if len((input_model[0]).shape) == 3:
+            if len((output_model[0]).shape) == 3:
                 log.warning("3D input is unsupported; step will be skipped")
-                input_model.meta.cal_step.extract_1d = "SKIPPED"
-                return input_model
+                output_model.meta.cal_step.extract_1d = "SKIPPED"
+                return output_model
         else:
-            log.error(f"Input is a {str(input_model)}, ")
+            log.error(f"Input is a {str(output_model)}, ")
             log.error("which was not expected for extract_1d.")
             log.error("The extract_1d step will be skipped.")
-            input_model.meta.cal_step.extract_1d = "SKIPPED"
-            return input_model
+            output_model.meta.cal_step.extract_1d = "SKIPPED"
+            return output_model
 
-        if not isinstance(input_model, ModelContainer):
-            exp_type = input_model.meta.exposure.type
-
-            # Make the input iterable
-            input_model = [input_model]
+        # Make the input iterable if it is not already
+        if not isinstance(output_model, ModelContainer):
+            output_models = [output_model]
         else:
-            exp_type = input_model[0].meta.exposure.type
-        log.debug(f"Input for EXP_TYPE {exp_type} contains {len(input_model)} items")
+            output_models = output_model
+        exp_type = output_models[0].meta.exposure.type
+        log.debug(f"Input for EXP_TYPE {exp_type} contains {len(output_models)} items")
 
-        if len(input_model) > 1 and exp_type in extract.WFSS_EXPTYPES:
+        if len(output_models) > 1 and exp_type in extract.WFSS_EXPTYPES:
             # For WFSS level-3, the input is a single entry of a
             # SourceContainer, which contains a list of multiple
             # SlitModels for a single source. Send the whole container
             # into extract1d and put all results in a single product.
-            input_model = [input_model]
+            output_models = [output_models]
 
         if exp_type == "NIS_SOSS":
             # Data is NIRISS SOSS observation, use its own extraction routines
@@ -404,12 +399,12 @@ class Extract1dStep(Step):
             )
 
             # There is only one input model for this mode
-            model = input_model[0]
+            model = output_models[0]
             result = self._extract_soss(model)
 
         else:
             result = ModelContainer()
-            for i, model in enumerate(input_model):
+            for i, model in enumerate(output_models):
                 # Get the reference file names
                 extract_ref, apcorr_ref, psf_ref = self._get_extract_reference_files_by_mode(
                     model, exp_type
@@ -449,7 +444,7 @@ class Extract1dStep(Step):
                 del extracted
 
                 # Save profile if needed
-                if len(input_model) > 1:
+                if len(output_models) > 1:
                     idx = i
                 else:
                     idx = None
@@ -482,5 +477,9 @@ class Extract1dStep(Step):
         if exp_type in extract.WFSS_EXPTYPES:
             result = make_wfss_multiexposure(result)
             result.meta.cal_step.extract_1d = "COMPLETE"
+
+        # The result is a new model, so close the input model if it was opened here.
+        if output_model is not input_data:
+            output_model.close()
 
         return result

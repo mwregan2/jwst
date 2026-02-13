@@ -57,6 +57,7 @@ __all__ = [
     "Asn_Lv2SpecTSO",
     "Asn_Lv2WFSSNIS",
     "Asn_Lv2WFSSNRC",
+    "Asn_Lv2WFSSMIR",
     "Asn_Lv2WFSSParallel",
     "Asn_Lv2WFSC",
 ]
@@ -74,6 +75,7 @@ class Asn_Lv2CoronAsRate(AsnMixin_Lv2Image, DMSLevel2bBase):
     Create normal rate products for some coronographic data.
 
     Characteristics;
+
         - Association type: ``image2``
         - Pipeline: ``calwebb_image2``
         - NIRCam Coronagraphic
@@ -118,7 +120,7 @@ class Asn_Lv2CoronAsRate(AsnMixin_Lv2Image, DMSLevel2bBase):
         """
         Override to always return false.
 
-        The override will force `make_member` to create a "rate"
+        The override will force ``make_member`` to create a "rate"
         product instead of a "rateints" product.
 
         Returns
@@ -135,6 +137,7 @@ class Asn_Lv2Image(AsnMixin_Lv2Image, DMSLevel2bBase):
     Level2b Non-TSO Science Image Association.
 
     Characteristics:
+
         - Association type: ``image2``
         - Pipeline: ``calwebb_image2``
         - Image-based science exposures
@@ -176,6 +179,7 @@ class Asn_Lv2ImageNonScience(AsnMixin_Lv2Special, AsnMixin_Lv2Image, DMSLevel2bB
     Level2b Non-science Image Association.
 
     Characteristics:
+
         - Association type: ``image2``
         - Pipeline: ``calwebb_image2``
         - Image-based non-science exposures, such as target acquisitions
@@ -202,6 +206,7 @@ class Asn_Lv2ImageSpecial(AsnMixin_Lv2Special, AsnMixin_Lv2Image, DMSLevel2bBase
     Level2b Auxiliary Science Image Association.
 
     Characteristics:
+
         - Association type: ``image2``
         - Pipeline: ``calwebb_image2``
         - Image-based science exposures that are to be used as background or PSF exposures
@@ -231,6 +236,7 @@ class Asn_Lv2ImageTSO(AsnMixin_Lv2Image, DMSLevel2bBase):
     Level2b Time Series Science Image Association.
 
     Characteristics:
+
         - Association type: ``tso-image2``
         - Pipeline: ``calwebb_tso-image2``
         - Image-based Time Series exposures
@@ -264,6 +270,7 @@ class Asn_Lv2FGS(AsnMixin_Lv2Image, DMSLevel2bBase):
     Level2b FGS Association.
 
     Characteristics:
+
         - Association type: ``image2``
         - Pipeline: ``calwebb_image2``
         - Image-based FGS science exposures
@@ -294,6 +301,7 @@ class Asn_Lv2Spec(AsnMixin_Lv2Spectral, AsnMixin_Lv2Imprint, DMSLevel2bBase):
     Level2b Science Spectral Association.
 
     Characteristics:
+
         - Association type: ``spec2``
         - Pipeline: ``calwebb_spec2``
         - Spectral-based single target science exposures
@@ -309,7 +317,14 @@ class Asn_Lv2Spec(AsnMixin_Lv2Spectral, AsnMixin_Lv2Imprint, DMSLevel2bBase):
                 Constraint_Base(),
                 Constraint_Mode(),
                 Constraint_Spectral_Science(
-                    exclude_exp_types=["nis_wfss", "nrc_wfss", "nrs_fixedslit", "nrs_msaspec"]
+                    exclude_exp_types=[
+                        "nis_wfss",
+                        "nrc_wfss",
+                        "nrs_fixedslit",
+                        "nrs_msaspec",
+                        "mir_lrs-slitless",
+                        "mir_lrs-fixedslit",
+                    ]
                 ),
                 Constraint(
                     [
@@ -363,6 +378,7 @@ class Asn_Lv2SpecImprint(AsnMixin_Lv2Special, AsnMixin_Lv2Spectral, DMSLevel2bBa
     Level2b Treat Imprint/Leakcal as science.
 
     Characteristics:
+
         - Association type: ``spec2``
         - Pipeline: ``calwebb_spec2``
         - Only handles Imprint/Leakcal exposures
@@ -398,6 +414,7 @@ class Asn_Lv2SpecSpecial(
     Level2b Auxiliary Science Spectral Association.
 
     Characteristics:
+
         - Association type: ``spec2``
         - Pipeline: ``calwebb_spec2``
         - Spectral-based single target science exposures that are background exposures
@@ -437,6 +454,7 @@ class Asn_Lv2SpecTSO(AsnMixin_Lv2Spectral, DMSLevel2bBase):
     Level2b Time Series Science Spectral Association.
 
     Characteristics:
+
         - Association type: ``tso-spec2``
         - Pipeline: ``calwebb_tso-spec2``
         - Spectral-based single target time series exposures
@@ -450,7 +468,14 @@ class Asn_Lv2SpecTSO(AsnMixin_Lv2Spectral, DMSLevel2bBase):
             [
                 Constraint_Base(),
                 Constraint_Mode(),
-                Constraint_Spectral_Science(exclude_exp_types=["nrs_msaspec", "nrs_fixedslit"]),
+                Constraint_Spectral_Science(
+                    exclude_exp_types=[
+                        "nrs_msaspec",
+                        "nrs_fixedslit",
+                        "mir_lrs-slitless",
+                        "mir_lrs-fixedslit",
+                    ]
+                ),
                 Constraint_Single_Science(self.has_science, self.get_exposure_type),
                 Constraint_TSO(),
                 Constraint(
@@ -522,11 +547,89 @@ class Asn_Lv2SpecTSO(AsnMixin_Lv2Spectral, DMSLevel2bBase):
 
 
 @RegistryMarker.rule
+class Asn_MIRLRSTAConfirm(AsnMixin_Lv2Spectral, DMSLevel2bBase):
+    """
+    Level2b MIRI LRS slit/slitless association with TA image.
+
+    Characteristics:
+
+        - Association type: ``spec2``
+        - Pipeline: ``calwebb_spec2``
+        - MIRI Target Acquisition verification exposure
+        - Single science exposure
+    """
+
+    def __init__(self, *args, **kwargs):
+        # single science exposure in LRS slit or slitless mode
+        sci = Constraint(
+            [
+                Constraint_Single_Science(self.has_science, self.get_exposure_type),
+                DMSAttrConstraint(
+                    name="exp_type",
+                    sources=["exp_type"],
+                    value="mir_lrs-slitless|mir_lrs-fixedslit",
+                ),
+            ]
+        )
+
+        # background exposures, only if not a TSO observation
+        not_tso = Constraint(
+            [
+                Constraint_TSO(),
+            ],
+            reduce=Constraint.notany,
+        )
+        bkg = Constraint(
+            [
+                Constraint_Background(),
+                not_tso,
+                DMSAttrConstraint(
+                    name="exp_type",
+                    sources=["exp_type"],
+                    value="mir_lrs-slitless|mir_lrs-fixedslit",
+                ),
+            ]
+        )
+
+        # ensure sci and bkg are same mode
+        scibkg = Constraint([sci, bkg], reduce=Constraint.any)
+        scibkg = Constraint(
+            [
+                Constraint_Mode(),
+                scibkg,
+            ]
+        )
+
+        # taconfirm exposures; ensure sci and taconfirm have same observation number
+        # otherwise can get multiple TA confirms in asn
+        taconfirm = DMSAttrConstraint(
+            name="exp_type",
+            sources=["exp_type"],
+            value="mir_taconfirm",
+        )
+        scita = Constraint([sci, taconfirm], reduce=Constraint.any)
+        scita = Constraint(
+            [
+                DMSAttrConstraint(name="obs_id", sources=["obs_id"]),
+                scita,
+            ]
+        )
+
+        # Combine constraints to allow final asn to contain both
+        exposures = Constraint([scibkg, scita], reduce=Constraint.any)
+
+        # add base constraint for all exposures
+        self.constraints = Constraint([Constraint_Base(), exposures])
+        super(Asn_MIRLRSTAConfirm, self).__init__(*args, **kwargs)
+
+
+@RegistryMarker.rule
 class Asn_Lv2MIRLRSFixedSlitNod(AsnMixin_Lv2Spectral, DMSLevel2bBase):
     """
     Level2b MIRI LRS Fixed Slit background nods Association.
 
     Characteristics:
+
         - Association type: ``spec2``
         - Pipeline: ``calwebb_spec2``
         - MIRI LRS Fixed slit
@@ -536,61 +639,81 @@ class Asn_Lv2MIRLRSFixedSlitNod(AsnMixin_Lv2Spectral, DMSLevel2bBase):
 
     def __init__(self, *args, **kwargs):
         # Setup constraints
-        self.constraints = Constraint(
+        # science exposure. must have along-slit nod pattern
+        sci = Constraint(
             [
-                Constraint_Base(),
-                Constraint_Mode(),
-                DMSAttrConstraint(name="exp_type", sources=["exp_type"], value="mir_lrs-fixedslit"),
+                DMSAttrConstraint(
+                    name="exp_type",
+                    sources=["exp_type"],
+                    value="mir_lrs-fixedslit",
+                ),
+                DMSAttrConstraint(
+                    name="patt_num",
+                    sources=["patt_num"],
+                ),
+                Constraint_Single_Science(
+                    self.has_science,
+                    self.get_exposure_type,
+                    reprocess_on_match=True,
+                    work_over=ListCategory.EXISTING,
+                ),
                 DMSAttrConstraint(
                     name="patttype",
                     sources=["patttype"],
                     value="along-slit-nod",
+                    force_unique=False,
                 ),
+            ]
+        )
+
+        # background exposure. must have different dither pointing index
+        background = Constraint(
+            [
+                DMSAttrConstraint(
+                    name="exp_type",
+                    sources=["exp_type"],
+                    value="mir_lrs-fixedslit",
+                ),
+                DMSAttrConstraint(
+                    name="is_current_patt_num",
+                    sources=["patt_num"],
+                    value=lambda: "((?!{}).)*".format(self.constraints["patt_num"].value),
+                ),
+                SimpleConstraint(
+                    name="force_match",
+                    value=None,
+                    sources=lambda _item: False,
+                    test=lambda _constraint, _obj: True,
+                    force_unique=True,
+                ),
+                DMSAttrConstraint(
+                    name="patttype",
+                    sources=["patttype"],
+                    value="along-slit-nod",
+                    force_unique=False,
+                ),
+            ]
+        )
+
+        # TA confirm exposure. just needs correct exp_type
+        taconfirm = DMSAttrConstraint(name="exp_type", sources=["exp_type"], value="mir_taconfirm")
+
+        # Combine constraints to allow final asn to contain science, background nods, and TA confirm
+        exposures = Constraint([sci, background, taconfirm], reduce=Constraint.any)
+
+        # Base constraints to apply to all exposures
+        base_constraints = Constraint(
+            [
+                Constraint_Base(),
                 SimpleConstraint(
                     value=True,
                     test=lambda _value, _item: self.acid.type != "background",
                     force_unique=False,
                 ),
-                Constraint(
-                    [
-                        Constraint(
-                            [
-                                DMSAttrConstraint(
-                                    name="patt_num",
-                                    sources=["patt_num"],
-                                ),
-                                Constraint_Single_Science(
-                                    self.has_science,
-                                    self.get_exposure_type,
-                                    reprocess_on_match=True,
-                                    work_over=ListCategory.EXISTING,
-                                ),
-                            ]
-                        ),
-                        Constraint(
-                            [
-                                DMSAttrConstraint(
-                                    name="is_current_patt_num",
-                                    sources=["patt_num"],
-                                    value=lambda: "((?!{}).)*".format(
-                                        self.constraints["patt_num"].value
-                                    ),
-                                ),
-                                SimpleConstraint(
-                                    name="force_match",
-                                    value=None,
-                                    sources=lambda _item: False,
-                                    test=lambda _constraint, _obj: True,
-                                    force_unique=True,
-                                ),
-                            ]
-                        ),
-                    ],
-                    reduce=Constraint.any,
-                ),
             ]
         )
 
+        self.constraints = Constraint([base_constraints, exposures])
         # Now check and continue initialization.
         super(Asn_Lv2MIRLRSFixedSlitNod, self).__init__(*args, **kwargs)
 
@@ -599,8 +722,8 @@ class Asn_Lv2MIRLRSFixedSlitNod(AsnMixin_Lv2Spectral, DMSLevel2bBase):
         Modify exposure type depending on dither pointing index.
 
         Behaves as the superclass method. However, if the constraint
-        `is_current_patt_num` is True, mark the exposure type as
-        `background`.
+        ``is_current_patt_num`` is True, mark the exposure type as
+        ``background``.
 
         Parameters
         ----------
@@ -627,6 +750,7 @@ class Asn_Lv2NRSLAMPImage(AsnMixin_Lv2Image, AsnMixin_Lv2Special, DMSLevel2bBase
     Level2b NIRSpec image Lamp Calibrations Association.
 
     Characteristics:
+
         - Association type: ``image2``
         - Pipeline: ``calwebb_image2``
         - Image-based calibration exposures
@@ -654,6 +778,7 @@ class Asn_Lv2NRSLAMPSpectral(AsnMixin_Lv2Special, DMSLevel2bBase):
     Level2b NIRSpec spectral Lamp Calibrations Association.
 
     Characteristics:
+
         - Association type: ``nrslamp-spec2``
         - Pipeline: ``calwebb_nrslamp-spec2``
         - Spectral-based calibration exposures
@@ -741,6 +866,7 @@ class Asn_Lv2WFSSNIS(
     Level2b WFSS/GRISM Association.
 
     Characteristics:
+
         - Association type: ``spec2``
         - Pipeline: ``calwebb_spec2``
         - Multi-object science exposures
@@ -812,11 +938,12 @@ class Asn_Lv2WFSSNRC(
     Level2b WFSS/GRISM Association.
 
     Characteristics:
-        - Association type: ``spec2``
-        - Pipeline: ``calwebb_spec2``
-        - Multi-object science exposures
-        - Single science exposure
-        - Require a source catalog from processing of the corresponding direct imagery.
+
+    - Association type: ``spec2``
+    - Pipeline: ``calwebb_spec2``
+    - Multi-object science exposures
+    - Single science exposure
+    - Require a source catalog from processing of the corresponding direct imagery.
     """
 
     def __init__(self, *args, **kwargs):
@@ -867,11 +994,76 @@ class Asn_Lv2WFSSNRC(
 
 
 @RegistryMarker.rule
+class Asn_Lv2WFSSMIR(
+    AsnMixin_Lv2WFSS,
+    AsnMixin_Lv2Spectral,
+):
+    """
+    Level2b MIR WFSS Association.
+
+    Characteristics:
+
+    - Association type: ``spec2``
+    - Pipeline: ``calwebb_spec2``
+    - Multi-object science exposures
+    - Single science exposure
+    - Require a source catalog from processing of the corresponding direct imagery.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.constraints = Constraint(
+            [
+                Constraint_Base(),
+                Constraint_Target(),
+                Constraint(
+                    [
+                        DMSAttrConstraint(
+                            name="exp_type",
+                            sources=["exp_type"],
+                            value="mir_wfss",
+                        ),
+                        DMSAttrConstraint(
+                            name="image_exp_type",
+                            sources=["exp_type"],
+                            value="mir_image",
+                            force_reprocess=ListCategory.NONSCIENCE,
+                            only_on_match=True,
+                        ),
+                    ],
+                    reduce=Constraint.any,
+                ),
+                DMSAttrConstraint(
+                    name="instrument",
+                    sources=["instrume"],
+                ),
+                DMSAttrConstraint(
+                    name="detector",
+                    sources=["detector"],
+                ),
+                Constraint(
+                    [
+                        SimpleConstraint(
+                            value="science",
+                            test=lambda value, item: self.get_exposure_type(item) != value,
+                            force_unique=False,
+                        ),
+                        Constraint_Single_Science(self.has_science, self.get_exposure_type),
+                    ],
+                    reduce=Constraint.any,
+                ),
+            ]
+        )
+
+        super(Asn_Lv2WFSSMIR, self).__init__(*args, **kwargs)
+
+
+@RegistryMarker.rule
 class Asn_Lv2NRSMSA(AsnMixin_Lv2Nod, AsnMixin_Lv2Spectral, DMSLevel2bBase):
     """
     Level2b NIRSpec MSA Association.
 
     Characteristics:
+
         - Association type: ``spec2``
         - Pipeline: ``calwebb_spec2``
         - Spectral-based NIRSpec MSA multi-object science exposures
@@ -912,6 +1104,7 @@ class Asn_Lv2NRSFSS(AsnMixin_Lv2Nod, AsnMixin_Lv2Spectral, DMSLevel2bBase):
     Notes
     -----
     Characteristics:
+
         - Association type: ``spec2``
         - Pipeline: ``calwebb_spec2``
         - Spectral-based NIRSpec fixed-slit single target science exposures
@@ -979,6 +1172,7 @@ class Asn_Lv2NRSIFUNod(AsnMixin_Lv2Imprint, AsnMixin_Lv2Nod, AsnMixin_Lv2Spectra
     Level2b NIRSpec IFU Association.
 
     Characteristics:
+
         - Association type: ``spec2``
         - Pipeline: ``calwebb_spec2``
         - Spectral-based NIRSpec IFU multi-object science exposures
@@ -1022,7 +1216,8 @@ class Asn_Lv2WFSC(DMSLevel2bBase):
     Level2b Wavefront Sensing & Control Association.
 
     Characteristics:
-        - Association type: ``wfs-image2``
+
+        - Association type: ``image2``
         - Pipeline: ``calwebb_wfs-image2``
         - WFS and WFS&C observations
         - Single science exposure
@@ -1056,7 +1251,7 @@ class Asn_Lv2WFSC(DMSLevel2bBase):
     def _init_hook(self, item):
         """Post-check and pre-add initialization."""
         super(Asn_Lv2WFSC, self)._init_hook(item)
-        self.data["asn_type"] = "wfs-image2"
+        self.data["asn_type"] = "image2"
 
 
 @RegistryMarker.rule
@@ -1068,6 +1263,7 @@ class Asn_Lv2WFSSParallel(
     Level 2b WFSS/GRISM associations for WFSS taken in pure-parallel mode.
 
     Characteristics:
+
         - Association type: ``spec2``
         - Pipeline: ``calwebb_spec2``
         - Multi-object science exposures
@@ -1157,7 +1353,7 @@ class Asn_Lv2WFSSParallel(
         Returns
         -------
         closest : dict
-            The direct image that is the "closest"
+            The direct image that is the "closest".
         """
         long_directs = [d for d in directs if "long" in d["expname"]]
         if len(long_directs) == 0:

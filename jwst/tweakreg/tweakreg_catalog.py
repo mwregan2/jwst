@@ -1,3 +1,5 @@
+"""The ``tweakreg_catalog`` module provides functions for generating catalogs of sources from images."""  # noqa: E501
+
 import inspect
 import logging
 import warnings
@@ -32,30 +34,29 @@ SOURCECAT_COLUMNS = DEFAULT_COLUMNS + [
 
 
 class JWSTBackground:
-    """Class to estimate a 2D background and background RMS noise in an image."""
+    """
+    Class to estimate a 2D background and background RMS noise in an image.
+
+    Parameters
+    ----------
+    data : ndarray
+        The input 2D image for which to estimate the background.
+
+    box_size : int or array-like (int)
+        The box size along each axis.  If ``box_size`` is a scalar then
+        a square box of size ``box_size`` will be used.  If ``box_size``
+        has two elements, they should be in ``(ny, nx)`` order.
+
+    coverage_mask : array-like (bool), optional
+        A boolean mask, with the same shape as ``data``, where a `True`
+        value indicates the corresponding element of ``data`` is masked.
+        Masked data are excluded from calculations. ``coverage_mask``
+        should be `True` where there is no coverage (i.e., no data) for
+        a given pixel (e.g., blank areas in a mosaic image). It should
+        not be used for bad pixels.
+    """
 
     def __init__(self, data, box_size=100, coverage_mask=None):
-        """
-        Initialize the class.
-
-        Parameters
-        ----------
-        data : ndarray
-            The input 2D image for which to estimate the background.
-
-        box_size : int or array-like (int)
-            The box size along each axis.  If ``box_size`` is a scalar then
-            a square box of size ``box_size`` will be used.  If ``box_size``
-            has two elements, they should be in ``(ny, nx)`` order.
-
-        coverage_mask : array-like (bool), optional
-            A boolean mask, with the same shape as ``data``, where a `True`
-            value indicates the corresponding element of ``data`` is masked.
-            Masked data are excluded from calculations. ``coverage_mask``
-            should be `True` where there is no coverage (i.e., no data) for
-            a given pixel (e.g., blank areas in a mosaic image). It should
-            not be used for bad pixels.
-        """
         self.data = data
         self.box_size = np.asarray(box_size).astype(int)  # must be integer
         self.coverage_mask = coverage_mask
@@ -345,8 +346,8 @@ def make_tweakreg_catalog(
 
     Parameters
     ----------
-    model : `~jwst.datamodels.ImageModel`
-        The input `~jwst.datamodels.ImageModel` of a single image.  The input image is
+    model : `~stdatamodels.jwst.datamodels.ImageModel`
+        The input `~stdatamodels.jwst.datamodels.ImageModel` of a single image.  The input image is
         assumed to be background subtracted.
     snr_threshold : float
         The signal-to-noise ratio per pixel above the ``background`` for
@@ -412,7 +413,8 @@ def make_tweakreg_catalog(
         with warnings.catch_warnings():
             # suppress warning about NaNs being automatically masked - this is desired
             warnings.simplefilter("ignore", AstropyUserWarning)
-            threshold_img = bkg.background + (snr_threshold * bkg.background_rms)
+            threshold_img = snr_threshold * bkg.background_rms
+        data = model.data - bkg.background
     except ValueError as e:
         log.warning(f"Error determining sky background: {e.args[0]}")
         sources = _empty_table()
@@ -425,7 +427,7 @@ def make_tweakreg_catalog(
             "ignore", category=NoDetectionsWarning, message="No sources were found"
         )
         sources, segmentation_image = starfinder(
-            model.data,
+            data,
             threshold_img,
             kernel_fwhm,
             mask=coverage_mask,

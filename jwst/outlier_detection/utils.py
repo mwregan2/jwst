@@ -17,7 +17,6 @@ from stdatamodels.jwst import datamodels
 
 from jwst.lib.pipe_utils import match_nans_and_flags
 from jwst.outlier_detection import _fileio
-from jwst.resample.resample import compute_image_pixel_area
 
 log = logging.getLogger(__name__)
 
@@ -264,6 +263,13 @@ def median_with_resampling(
                 # update median model's meta with meta from the first model:
                 median_model.update(drizzled_model)
                 median_model.meta.wcs = median_wcs
+                # Certain attributes that represent only one slit get copied over,
+                # but the median model isn't associated with any particular slit.
+                # Delete those.
+                if median_model.hasattr("source_xpos"):
+                    del median_model.source_xpos
+                if median_model.hasattr("source_ypos"):
+                    del median_model.source_ypos
 
         weight_threshold = compute_weight_threshold(drizzled_model.wht, maskpt)
         drizzled_model.data[drizzled_model.wht < weight_threshold] = np.nan
@@ -359,30 +365,19 @@ def flag_resampled_model_crs(
         The functools.partial instance to pass to save_blot. Must be
         specified if save_blot is True.
     """
-    if "SPECTRAL" not in input_model.meta.wcs.output_frame.axes_type:
-        input_pixflux_area = input_model.meta.photometry.pixelarea_steradians
-        # Set array shape, needed to compute image pixel area
-        input_model.meta.wcs.array_shape = input_model.shape
-        input_pixel_area = compute_image_pixel_area(input_model.meta.wcs)
-        pix_ratio = np.sqrt(input_pixflux_area / input_pixel_area)
-    else:
-        pix_ratio = 1.0
-
     blot = gwcs_blot(
-        median_data,
-        median_wcs,
-        input_model.data.shape,
-        input_model.meta.wcs,
-        pix_ratio,
+        median_data=median_data,
+        median_wcs=median_wcs,
+        blot_shape=input_model.data.shape,
+        blot_wcs=input_model.meta.wcs,
         fillval=np.nan,
     )
     if median_err is not None:
         blot_err = gwcs_blot(
-            median_err,
-            median_wcs,
-            input_model.data.shape,
-            input_model.meta.wcs,
-            pix_ratio,
+            median_data=median_err,
+            median_wcs=median_wcs,
+            blot_shape=input_model.data.shape,
+            blot_wcs=input_model.meta.wcs,
             fillval=np.nan,
         )
     else:

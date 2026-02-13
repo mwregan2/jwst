@@ -22,6 +22,10 @@ from configparser import ConfigParser
 
 from stpipe import Step
 from sphinx.ext.autodoc import AttributeDocumenter
+from sphinx.util.docutils import SphinxDirective
+from docutils import nodes
+
+from jwst import __version__ as version
 
 
 class StepSpecDocumenter(AttributeDocumenter):
@@ -47,9 +51,35 @@ class StepSpecDocumenter(AttributeDocumenter):
         self.add_line(f"  {txt}", source_name, 2)
 
 
+class PipInstallVersionDirective(SphinxDirective):
+
+    def run(self):
+        help_text = f"pip install jwst=={version}\n"
+        paragraph_node = nodes.literal_block(text=help_text)
+        return [paragraph_node]
+
+
+class CondaInstallVersionDirective(SphinxDirective):
+
+    def run(self):
+        help_text = (
+            "conda create -n <env_name> python=3.13\n"
+            "conda activate <env_name>\n"
+            f"pip install jwst=={version}\n"
+        )
+        paragraph_node = nodes.literal_block(text=help_text)
+        return [paragraph_node]
+
+
 def setup(app):
     # add a custom AttributeDocumenter subclass to handle Step.spec formatting
-    app.add_autodocumenter(StepSpecDocumenter, True)
+    def register_documenter(app, config):
+        app.add_autodocumenter(StepSpecDocumenter, True)
+    # register it with a high priority so it behaves with the built-in autodoc
+    app.connect("config-inited", register_documenter, priority=9000)
+
+    app.add_directive('pip_install_literal', PipInstallVersionDirective)
+    app.add_directive('conda_install_literal', CondaInstallVersionDirective)
 
 
 conf = ConfigParser()
@@ -67,17 +97,20 @@ with open(Path(__file__).parent.parent / "pyproject.toml", "rb") as metadata_fil
 
 # Configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3/', None),
-    'numpy': ('https://numpy.org/devdocs', None),
-    'scipy': ('https://scipy.github.io/devdocs', None),
-    'matplotlib': ('https://matplotlib.org/', None),
+    'asdf': ('https://asdf.readthedocs.io/en/stable/', None),
     'astropy': ('https://docs.astropy.org/en/stable/', None),
-    'photutils': ('https://photutils.readthedocs.io/en/stable/', None),
+    'drizzle': ('https://spacetelescope-drizzle.readthedocs.io/en/latest/', None),
     'gwcs': ('https://gwcs.readthedocs.io/en/stable/', None),
-    'stdatamodels': ('https://stdatamodels.readthedocs.io/en/latest/', None),
+    'matplotlib': ('https://matplotlib.org/', None),
+    'numpy': ('https://numpy.org/devdocs', None),
+    'photutils': ('https://photutils.readthedocs.io/en/stable/', None),
+    'python': ('https://docs.python.org/3/', None),
+    'requests': ('https://requests.readthedocs.io/en/latest/', None),
+    'scipy': ('https://scipy.github.io/devdocs', None),
     'stcal': ('https://stcal.readthedocs.io/en/latest/', None),
+    'stdatamodels': ('https://stdatamodels.readthedocs.io/en/latest/', None),
     'stpipe': ('https://stpipe.readthedocs.io/en/latest/', None),
-    'drizzle': ('https://drizzlepac.readthedocs.io/en/latest/', None),
+    'synphot': ('https://synphot.readthedocs.io/en/latest/', None),
     'tweakwcs': ('https://tweakwcs.readthedocs.io/en/latest/', None),
 }
 
@@ -472,4 +505,4 @@ linkcheck_allow_unauthorized = False
 
 # Enable nitpicky mode - which ensures that all references in the docs
 # resolve.
-nitpicky = False
+nitpicky = True

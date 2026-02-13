@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import logging
+import warnings
 from collections import defaultdict
 from pathlib import Path
 
@@ -31,7 +32,7 @@ class Image2Pipeline(Pipeline):
     class_alias = "calwebb_image2"
 
     spec = """
-        save_bsub = boolean(default=False) # Save background-subtracted science
+        save_bsub = boolean(default=False) # Deprecated; use the background step's save_results parameter instead.
     """  # noqa: E501
 
     # Define alias to steps
@@ -61,6 +62,15 @@ class Image2Pipeline(Pipeline):
             The calibrated data models.
         """
         log.info("Starting calwebb_image2 ...")
+
+        if self.save_bsub:
+            deprecation_message = (
+                "The --save_bsub parameter is deprecated and will be removed in a future release. "
+                "To toggle saving background-subtracted data, use the background step's "
+                "--save_results parameter instead."
+            )
+            warnings.warn(deprecation_message, DeprecationWarning, stacklevel=2)
+            log.warning(deprecation_message)
 
         # Retrieve the input(s)
         asn = LoadAsLevel2Asn.load(input_data, basename=self.output_file)
@@ -134,10 +144,7 @@ class Image2Pipeline(Pipeline):
         science = science[0]
 
         log.info("Working on input %s ...", science)
-        if isinstance(science, datamodels.JwstDataModel):
-            input_data = science
-        else:
-            input_data = datamodels.open(science)
+        input_data = self.prepare_output(science)
 
         # Record ASN pool and table names in output
         input_data.meta.asn.pool_name = pool_name
