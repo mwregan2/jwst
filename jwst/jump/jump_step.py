@@ -1,5 +1,3 @@
-"""Detect jumps based on science data and reference files."""
-
 import logging
 import time
 
@@ -33,13 +31,13 @@ class JumpStep(Step):
         after_jump_flag_dn2 = float(default=0) # 2nd flag groups after jump above DN threshold
         after_jump_flag_time2 = float(default=0) # 2nd flag groups after jump groups within specified time
         expand_large_events = boolean(default=False) # Turns on Snowball detector for NIR detectors
-        min_sat_area = float(default=1.0) # minimum required area for the central saturation of snowballs
+        min_sat_area = float(default=1.0) # minimum required area for the center of snowballs to expand
         min_jump_area = float(default=5.0) # minimum area to trigger large events processing
         expand_factor = float(default=2.0) # The expansion factor for the enclosing circles or ellipses
         use_ellipses = boolean(default=False) # deprecated
         sat_required_snowball = boolean(default=True) # Require the center of snowballs to be saturated
         min_sat_radius_extend = float(default=2.5) # The min radius of the sat core to trigger the extension of the core
-        sat_expand = integer(default=2) # Number of pixels to add to the radius of the saturated core of snowballs
+        sat_expand = float(default=2) # Number of pixels to add to the radius of the saturated core of snowballs
         edge_size = integer(default=25) # Distance from detector edge where a saturated core is not required for snowball detection
         mask_snowball_core_next_int = boolean(default=True) # Flag saturated cores of snowballs in the next integration?
         snowball_time_masked_next_int = integer(default=4000) # Time in seconds over which saturated cores are flagged in next integration
@@ -56,8 +54,9 @@ class JumpStep(Step):
         minimum_groups = integer(default=3) # The minimum number of groups to perform jump detection using sigma clipping
         minimum_sigclip_groups = integer(default=100) # The minimum number of groups to switch to sigma clipping
         only_use_ints = boolean(default=True) # In sigclip only compare the same group across ints, if False compare all groups
+        write_saturated_cores = boolean(default=False)  # Write the saturated cores to disk
+        output_directory = string(default='./')  # The output directory to write the saturation mask files
     """  # noqa: E501
-
     reference_file_types = ["gain", "readnoise"]
 
     class_alias = "jump"
@@ -68,64 +67,65 @@ class JumpStep(Step):
 
         Parameters
         ----------
-        step_input : `~stdatamodels.jwst.datamodels.RampModel`
+        step_input : RampModel
             The ramp model input from the previous step.
 
         Returns
         -------
-        result : `~stdatamodels.jwst.datamodels.RampModel`
+        result : RampModel
             The ramp model with jump step as COMPLETE and jumps detected or
             the jump step is SKIPPED.
         """
         # Open the input data model
-        result = self.prepare_output(step_input, open_as_type=datamodels.RampModel)
+        with datamodels.RampModel(step_input) as input_model:
+            tstart = time.time()
 
-        # Start a timer
-        tstart = time.time()
+            # Check for an input model with NGROUPS<=2
+            nints, ngroups, nrows, ncols = input_model.data.shape
+            if ngroups <= 2:
+                log.warning("Cannot apply jump detection when NGROUPS<=2;")
+                log.warning("Jump step will be skipped")
+                input_model.meta.cal_step.jump = "SKIPPED"
+                return input_model
 
-        # Check for an input model with NGROUPS<=2
-        nints, ngroups, nrows, ncols = result.data.shape
-        if ngroups <= 2:
-            log.warning("Cannot apply jump detection when NGROUPS<=2;")
-            log.warning("Jump step will be skipped")
-            result.meta.cal_step.jump = "SKIPPED"
-            return result
+            log.info("CR rejection threshold = %g sigma", self.rejection_threshold)
+            if self.maximum_cores != "none":
+                log.info("Maximum cores to use = %s", self.maximum_cores)
 
-        log.info("CR rejection threshold = %g sigma", self.rejection_threshold)
-        if self.maximum_cores != "none":
-            log.info("Maximum cores to use = %s", self.maximum_cores)
+            # Detect jumps using a copy of the input data model.
+            result = input_model.copy()
+            jump_data = self._setup_jump_data(result)
+            new_gdq, new_pdq, number_crs, number_extended_events = detect_jumps_data(
+                jump_data
+            )
 
-        # Detect jumps using a copy of the input data model.
-        jump_data = self._setup_jump_data(result)
-        new_gdq, new_pdq, number_crs, number_extended_events = detect_jumps_data(jump_data)
+            # Update the DQ arrays of the output model with the jump detection results
+            result.groupdq = new_gdq
+            result.pixeldq = new_pdq
 
-        # Update the DQ arrays of the output model with the jump detection results
-        result.groupdq = new_gdq
-        result.pixeldq = new_pdq
+            # determine the number of groups with all pixels set to DO_NOT_USE
+            dnu_flag = dqflags.pixel["DO_NOT_USE"]
+            num_flagged_grps = 0
+            for integ in range(nints):
+                for grp in range(ngroups):
+                    if np.all(np.bitwise_and(result.groupdq[integ, grp, :, :], dnu_flag)):
+                        num_flagged_grps += 1
 
-        # determine the number of groups with all pixels set to DO_NOT_USE
-        dnu_flag = dqflags.pixel["DO_NOT_USE"]
-        num_flagged_grps = 0
-        for integ in range(nints):
-            for grp in range(ngroups):
-                if np.all(np.bitwise_and(result.groupdq[integ, grp, :, :], dnu_flag)):
-                    num_flagged_grps += 1
+            total_groups = nints * ngroups - num_flagged_grps - nints
+            if total_groups >= 1:
+                total_time = result.meta.exposure.group_time * total_groups
+                total_pixels = nrows * ncols
 
-        total_groups = nints * ngroups - num_flagged_grps - nints
-        if total_groups >= 1:
-            total_time = result.meta.exposure.group_time * total_groups
-            total_pixels = nrows * ncols
+                crs = 1000 * number_crs / (total_time * total_pixels)
+                result.meta.exposure.primary_cosmic_rays = crs
 
-            crs = 1000 * number_crs / (total_time * total_pixels)
-            result.meta.exposure.primary_cosmic_rays = crs
+                events = 1e6 * number_extended_events / (total_time * total_pixels)
+                result.meta.exposure.extended_emission_events = events
 
-            events = 1e6 * number_extended_events / (total_time * total_pixels)
-            result.meta.exposure.extended_emission_events = events
+            tstop = time.time()
+            log.info("The execution time in seconds: %f", tstop - tstart)
 
-        tstop = time.time()
-        log.info("The execution time in seconds: %f", tstop - tstart)
-
-        result.meta.cal_step.jump = "COMPLETE"
+            result.meta.cal_step.jump = "COMPLETE"
 
         return result
 
@@ -135,12 +135,12 @@ class JumpStep(Step):
 
         Parameters
         ----------
-        result : `~stdatamodels.jwst.datamodels.RampModel`
+        result : RampModel
             The ramp model input from the previous step.
 
         Returns
         -------
-        jump_data : `~stcal.jump.jump_class.JumpData`
+        jump_data : JumpData
             The data container to be used to run the STCAL detect_jumps_data.
         """
         # Get the gain and readnoise reference files
@@ -148,7 +148,6 @@ class JumpStep(Step):
         log.info("Using GAIN reference file: %s", gain_filename)
         readnoise_filename = self.get_reference_file(result, "readnoise")
         log.info("Using READNOISE reference file: %s", readnoise_filename)
-
         with (
             datamodels.ReadnoiseModel(readnoise_filename) as rnoise_m,
             datamodels.GainModel(gain_filename) as gain_m,
@@ -167,8 +166,8 @@ class JumpStep(Step):
                 rnoise_2d = reffile_utils.get_subarray_model(result, rnoise_m).data
 
         # Instantiate a JumpData class and populate it based on the input RampModel.
+        fits_location = self.parent.output_dir
         jump_data = JumpData(result, gain_2d, rnoise_2d, dqflags.pixel)
-
         jump_data.set_detection_settings(
             self.rejection_threshold,
             self.three_group_rejection_threshold,
@@ -191,7 +190,8 @@ class JumpStep(Step):
             after_jump_flag_n2,
         )
 
-        sat_expand = self.sat_expand * 2
+#        sat_expand = self.sat_expand * 2
+        print("fits_location", fits_location)
         jump_data.set_snowball_info(
             self.expand_large_events,
             self.min_jump_area,
@@ -199,8 +199,14 @@ class JumpStep(Step):
             self.expand_factor,
             self.sat_required_snowball,
             self.min_sat_radius_extend,
-            sat_expand,
+            self.sat_expand,
             self.edge_size,
+            self.write_saturated_cores,
+            self.mask_snowball_core_next_int,
+            result.meta.instrument.detector,
+            result.meta.exposure.start_time,
+            result.meta.exposure.end_time,
+            fits_location + '/',
         )
 
         max_extended_radius = self.max_extended_radius * 2
