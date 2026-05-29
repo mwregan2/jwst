@@ -190,8 +190,6 @@ class JumpStep(Step):
             after_jump_flag_n2,
         )
 
-#        sat_expand = self.sat_expand * 2
-        print("fits_location", fits_location)
         jump_data.set_snowball_info(
             self.expand_large_events,
             self.min_jump_area,
